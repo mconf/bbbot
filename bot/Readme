@@ -1,0 +1,12 @@
+http://www.xuggle.com/xuggler/downloads/
+
+Successfully Installed: xuggle-xuggler to /usr/local/xuggler
+  License Key: LGPL License
+
+To use, make sure the following environment variables are
+always set  prior to running programs using this product
+ (for example, copy and paste these lines into ~/.profile)
+
+export XUGGLE_HOME=/usr/local/xuggler
+export LD_LIBRARY_PATH=$XUGGLE_HOME/lib:$LD_LIBRARY_PATH
+export PATH=$XUGGLE_HOME/bin:$PATH
