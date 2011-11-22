@@ -24,11 +24,6 @@
             <pom refid="maven.project"/>
             <localRepository refid="local.repository"/>
         </artifact:dependencies>
-
-        <copy todir="lib" flatten="true">            
-            <fileset refid="runtime.fileset"/>
-            <fileset refid="test.fileset"/>
-        </copy>
 	</target>
     
     <!-- ========================= BUILD ============================ -->
@@ -40,16 +35,29 @@
     </target>        
     
     <target name="compile" depends="mvn-init">
+		<ant dir="../flazr/" target="dist"/>
+		<ant dir="../bbb-java/" target="dist"/>
+    	<mkdir dir="target/${ant.project.name}/lib"/>
+		<copy todir="target/${ant.project.name}/lib">
+    		<fileset dir="../flazr/target/flazr/lib" />
+			<fileset dir="../bbb-java/target/bbb-java/lib" />
+			<fileset file="/usr/local/xuggler/share/java/jars/xuggle-xuggler.jar"/>
+		</copy>
         <mkdir dir="target/classes"/>        
-        <javac srcdir="src/main/java" destdir="target/classes" debug="true" 
-            classpathref="compile.classpath" source="1.6" target="1.6" includeantruntime="false"/>
+	    <javac srcdir="src/main/java" destdir="target/classes" debug="true" 
+	        source="1.6" target="1.6" includeantruntime="false">
+			<classpath>
+				<fileset dir="target/${ant.project.name}/lib" />
+			    <path refid="compile.classpath"/>
+			</classpath>
+		</javac>
         <copy todir="target/classes">
             <fileset dir="src/main/java" excludes="**/*.java"/>
         </copy>         
         <copy todir="target/classes" failonerror="false">
             <fileset dir="src/main/resources"/>
         </copy>              
-    </target>             
+    </target>
     
     <target name="compile-test" depends="compile">   
         <mkdir dir="target/test-classes"/>
@@ -68,70 +76,44 @@
     <!-- ========================= DIST ============================ -->
 
     <target name="dist-input-version">
-        <!--input message="Release Version:" addproperty="flazr.version"/-->
-		<property name="flazr.version" value="git" />
+        <!--input message="Release Version:" addproperty="version"/-->
+		<property name="version" value="git" />
     </target>
 
     <target name="dist" depends="dist-input-version, compile">
-        <copy todir="target/flazr/lib" flatten="true">            
+        <copy todir="target/${ant.project.name}/lib" flatten="true">            
             <fileset refid="runtime.fileset"/>
             <fileset refid="test.fileset"/>
         </copy>
-        <!-- temp exclude for server release -->
-        <delete dir="target/flazr/lib" includes="groovy*"/>
-        <jar destfile="target/flazr/lib/flazr-${flazr.version}.jar">
-            <fileset dir="target/classes" excludes="log4j.properties"/>
+        <jar destfile="target/${ant.project.name}-${version}.jar">
+		    <fileset dir="target/classes" />
+		    <restrict>
+				<name name="**/*.class"/>
+				<archives>
+					<zips>
+						<fileset dir="target/${ant.project.name}/lib" includes="**/*.jar"/>
+					</zips>
+				</archives>
+		    </restrict>
+            <manifest>
+              <attribute name="Main-Class"
+                    value="org.mconf.bbb.bot.BotManager"/>
+            </manifest>	
         </jar>
-        <!--copy todir="target/flazr/home/apps/vod">
-            <fileset dir="home/apps/vod"/>
-        </copy-->
-        <copy todir="target/flazr/conf">
-            <fileset dir="conf"/>
-            <fileset dir="etc" includes="log4j.properties"/>
-        </copy>
-        <!-- temp for server release
-        <copy todir="target/flazr/scripts">
-            <fileset dir="etc" includes="*.groovy"/>         
-        </copy>
-        -->
-        <copy todir="target/flazr">
-            <fileset dir="." includes="COPYING*,*.txt"/>            
-        </copy>
-        <copy todir="target/flazr/license">
-            <fileset dir="license"/>
-        </copy>
         <path id="lib.jars">
-            <path location="target/flazr/conf"/>
-            <fileset dir="target/flazr/lib"/>
+            <path location="target/${ant.project.name}/conf"/>
+            <fileset dir="target/${ant.project.name}/lib"/>
         </path>
         <pathconvert targetos="unix" property="lib.jars.path.unix" refid="lib.jars">
-            <map from="${basedir}/target/flazr/conf" to="conf"/>
-            <map from="${basedir}/target/flazr/lib" to="lib"/>
+            <map from="${basedir}/target/${ant.project.name}/conf" to="conf"/>
+            <map from="${basedir}/target/${ant.project.name}/lib" to="lib"/>
         </pathconvert>
         <pathconvert targetos="windows" property="lib.jars.path.windows" refid="lib.jars">
-            <map from="${basedir}/target/flazr/conf" to="conf"/>
-            <map from="${basedir}/target/flazr/lib" to="lib"/>            
+            <map from="${basedir}/target/${ant.project.name}/conf" to="conf"/>
+            <map from="${basedir}/target/${ant.project.name}/lib" to="lib"/>            
         </pathconvert>
-        <concat destfile="target/flazr/client.sh">java -Xmx512m -cp ${lib.jars.path.unix} -Dflazr.log.suffix=-client com.flazr.rtmp.client.RtmpClient $*</concat>
-        <concat destfile="target/flazr/client.bat">java -Xmx512m -cp ${lib.jars.path.windows} -Dflazr.log.suffix=-client com.flazr.rtmp.client.RtmpClient %*</concat>
-        <concat destfile="target/flazr/server-start.sh">java -Xmx128m -cp ${lib.jars.path.unix} -Dflazr.log.suffix=-server com.flazr.rtmp.server.RtmpServer $*</concat>
-        <concat destfile="target/flazr/server-start.bat">java -Xmx128m -cp ${lib.jars.path.windows} -Dflazr.log.suffix=-server com.flazr.rtmp.server.RtmpServer %*</concat>
-        <concat destfile="target/flazr/server-stop.sh">java -cp ${lib.jars.path.unix} -Dflazr.log.suffix=-stop com.flazr.rtmp.server.ServerStop $*</concat>
-        <concat destfile="target/flazr/server-stop.bat">java -cp ${lib.jars.path.windows} -Dflazr.log.suffix=-stop com.flazr.rtmp.server.ServerStop %*</concat>
-        <concat destfile="target/flazr/proxy-start.sh">java -cp ${lib.jars.path.unix} -Dflazr.log.suffix=-proxy com.flazr.rtmp.proxy.RtmpProxy $*</concat>
-        <concat destfile="target/flazr/proxy-start.bat">java -cp ${lib.jars.path.windows} -Dflazr.log.suffix=-proxy com.flazr.rtmp.proxy.RtmpProxy %*</concat>
-        <concat destfile="target/flazr/proxy-stop.sh">java -cp ${lib.jars.path.unix} -Dflazr.log.suffix=-stop com.flazr.rtmp.proxy.ProxyStop $*</concat>
-        <concat destfile="target/flazr/proxy-stop.bat">java -cp ${lib.jars.path.windows} -Dflazr.log.suffix=-stop com.flazr.rtmp.proxy.ProxyStop %*</concat>
-        <zip destfile="target/flazr-${flazr.version}.zip">
-            <zipfileset dir="target/flazr" excludes="home/apps/vod/*" prefix="flazr-${flazr.version}"/>
+        <zip destfile="target/${ant.project.name}-${version}.zip">
+            <zipfileset dir="target/${ant.project.name}" excludes="home/apps/vod/*" prefix="${ant.project.name}-${version}"/>
         </zip>      
     </target>
-
-    <target name="dist-jar-scp">
-        <input message="Please enter password:" addproperty="password"/>
-        <scp file="target/flazr-0.7-RC2.zip"
-            todir="ptrthomas@web.sourceforge.net:/home/groups/f/fl/flazr/htdocs/files"
-            password="${password}" trust="true"/>
-    </target>
-              
 </project>
