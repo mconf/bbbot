@@ -3,6 +3,7 @@
 package org.mconf.bbb.bot;
 
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -13,27 +14,26 @@ import joptsimple.OptionDescriptor;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 
+import org.apache.commons.cli.UnrecognizedOptionException;
 import org.mconf.bbb.BigBlueButtonClient;
+import org.mconf.bbb.api.JoinServiceBase;
 import org.mconf.bbb.api.Meeting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.sun.xml.internal.ws.util.StringUtils;
 
 public class BotManager {
+	private static final Logger log = LoggerFactory.getLogger(BotManager.class);
 		
 	//Creates the Master (a BbbBot object), which will spawn the bots.
 	public static void main (String[] args) throws IOException {
 		BotManager Master = new BotManager(args);
 		Master.spawnBots();
-//		if (Master.getVideoFileName().equals("")) {
-//			//do nothing
-//		}
-//		else {
-//			//video enabled
-//			Master.sendBotsVideo();
-//		}
-		
 	}
 	
 	private int nBots = 1;
-	private String server = "http://mconf.org:8888";
+	private String server = "";
 	private String securityKey = "";
 	private String room = "";
 	private List<Bot> botArmy = new ArrayList<Bot>();
@@ -84,25 +84,30 @@ public class BotManager {
 		
 		OptionSet options = parser.parse(args);
 		
-		if (options.has("n"))
-			nBots = (Integer) options.valueOf("n");
-		if (options.has("m"))
-			room = (String) options.valueOf("m");
 		if (options.has("s"))
 			server = (String) options.valueOf("s");
+		if (options.has("n"))
+			nBots = Integer.parseInt((String) options.valueOf("n"));
+		if (options.has("m"))
+			room = (String) options.valueOf("m");
 		if (options.has("p"))
 			securityKey = (String) options.valueOf("p");
 		if (options.has("meetings")) {
 			BigBlueButtonClient client = new BigBlueButtonClient();
 			client.createJoinService(server, securityKey);
-			client.getJoinService().load();
+			JoinServiceBase joinService = client.getJoinService();
+			if (joinService == null) {
+				log.error("Can't connect to the server, please check the server address");
+				System.exit(1);
+			}
+			joinService.load();
 			List<Meeting> meetings = client.getJoinService().getMeetings();
 			if (meetings.isEmpty())
-				System.out.println("No open meetings");
+				log.info("No open meetings");
 			else {
-				System.out.println("Open meetings:");
+				log.info("Open meetings:");
 				for (Meeting meeting : meetings) {
-					System.out.println(meeting);
+					log.info(meeting.toString());
 				}
 			}
 			System.exit(0);
@@ -116,10 +121,11 @@ public class BotManager {
 	}
 		
 	public void spawnBots() {
-		for (int i = 0; i < nBots; ++i) {
+		DecimalFormat format = new DecimalFormat(new String(new char[Integer.toString(nBots).length()]).replace("\0", "0"));
+		for (int i = 1; i <= nBots; ++i) {
 			Bot bot = new Bot(server, securityKey, room, videoFileName);
 			botArmy.add(bot);
-			bot.connect(i);
+			bot.connect(format.format(i));
 		}
 	}
 

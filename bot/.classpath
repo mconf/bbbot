@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path="src/main/java"/>
+	<classpathentry kind="src" path="src/main/resources"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/bbb-java"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/flazr"/>
+	<classpathentry kind="lib" path="target/bbbot/lib/jopt-simple-4.2.jar"/>
 	<classpathentry kind="lib" path="/usr/local/xuggler/share/java/jars/xuggle-xuggler.jar"/>
-	<classpathentry kind="lib" path="lib/jopt-simple-4.2.jar"/>
-	<classpathentry kind="lib" path="src/main/resources/log4j.properties"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>
