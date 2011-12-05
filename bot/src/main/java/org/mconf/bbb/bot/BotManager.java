@@ -45,7 +45,7 @@ public class BotManager {
 		parser.accepts("meetings", "open rooms");
 		parser.accepts("n", "number of bots").withRequiredArg().defaultsTo(Integer.toString(nBots));
 		parser.accepts("m", "meeting id to spawn the bots").withRequiredArg();
-		parser.accepts("s", "server address").withRequiredArg().defaultsTo(server);
+		parser.accepts("s", "server address").withRequiredArg();
 		parser.accepts("p", "password").withRequiredArg();
 		parser.accepts("v", "video filename to be sent").withRequiredArg();
 		parser.accepts("help", "displays help information");

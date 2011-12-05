@@ -85,8 +85,8 @@
             <fileset refid="runtime.fileset"/>
             <fileset refid="test.fileset"/>
         </copy>
-        <jar destfile="target/${ant.project.name}-${version}.jar">
-		    <fileset dir="target/classes" />
+        <jar destfile="bin/${ant.project.name}.jar">
+		    <fileset dir="target/classes" excludes="log4j.properties"/>
 		    <restrict>
 				<name name="**/*.class"/>
 				<archives>
@@ -96,10 +96,11 @@
 				</archives>
 		    </restrict>
             <manifest>
-              <attribute name="Main-Class"
-                    value="org.mconf.bbb.bot.BotManager"/>
+                <attribute name="Main-Class" value="org.mconf.bbb.bot.BotManager"/>
+            	<attribute name="Class-Path" value="."/>
             </manifest>	
         </jar>
+    	<copy todir="bin/" file="src/main/resources/log4j.properties" overwrite="true"/>
         <path id="lib.jars">
             <path location="target/${ant.project.name}/conf"/>
             <fileset dir="target/${ant.project.name}/lib"/>
