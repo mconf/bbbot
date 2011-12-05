@@ -14,40 +14,35 @@ import joptsimple.OptionDescriptor;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 
-import org.apache.commons.cli.UnrecognizedOptionException;
 import org.mconf.bbb.BigBlueButtonClient;
 import org.mconf.bbb.api.JoinServiceBase;
 import org.mconf.bbb.api.Meeting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.sun.xml.internal.ws.util.StringUtils;
-
 public class BotManager {
 	private static final Logger log = LoggerFactory.getLogger(BotManager.class);
 		
-	//Creates the Master (a BbbBot object), which will spawn the bots.
-	public static void main (String[] args) throws IOException {
-		BotManager Master = new BotManager(args);
-		Master.spawnBots();
-	}
-	
-	private int nBots = 1;
+	private int numbots = 1;
 	private String server = "";
 	private String securityKey = "";
-	private String room = "";
+	private String meeting = "";
 	private List<Bot> botArmy = new ArrayList<Bot>();
-	private String videoFileName = null;
+	private String videoFilename = null;
+	private String name = "Bot";
+	private String role = "MODERATOR";
 	
-	//processes the arguments
-	public BotManager(String[] args) throws IOException{
+	private boolean parse(String[] args) throws IOException {
 		OptionParser parser = new OptionParser();
-		parser.accepts("meetings", "open rooms");
-		parser.accepts("n", "number of bots").withRequiredArg().defaultsTo(Integer.toString(nBots));
-		parser.accepts("m", "meeting id to spawn the bots").withRequiredArg();
-		parser.accepts("s", "server address").withRequiredArg();
-		parser.accepts("p", "password").withRequiredArg();
-		parser.accepts("v", "video filename to be sent").withRequiredArg();
+		parser.accepts("meetings", "displays the open rooms");
+		parser.accepts("create", "creates a new meeting").withRequiredArg();
+		parser.accepts("numbots", "number of bots").withRequiredArg().defaultsTo(Integer.toString(numbots));
+		parser.accepts("meeting", "meeting id to spawn the bots").withRequiredArg();
+		parser.accepts("server", "server address").withRequiredArg();
+		parser.accepts("key", "server security key").withRequiredArg();
+		parser.accepts("video", "video filename to be sent").withRequiredArg();
+		parser.accepts("name", "name of the bots").withRequiredArg().defaultsTo(name);
+		parser.accepts("role", "role of the bots in the conference (moderator|viewer)").withRequiredArg().defaultsTo(role);
 		parser.accepts("help", "displays help information");
 		
 		HelpFormatter formatter = new HelpFormatter() {
@@ -69,13 +64,6 @@ public class BotManager {
 	            line.append( ": " ).append( descriptor.description() );
 	            if (!descriptor.defaultValues().isEmpty())
 	            	line.append( " " ).append(descriptor.defaultValues() );
-//	            line.append( ": description = " ).append( descriptor.description() );
-//	            line.append( ", required = " ).append( descriptor.isRequired() );
-//	            line.append( ", accepts arguments = " ).append( descriptor.acceptsArguments() );
-//	            line.append( ", requires argument = " ).append( descriptor.requiresArgument() );
-//	            line.append( ", argument description = " ).append( descriptor.argumentDescription() );
-//	            line.append( ", argument type indicator = " ).append( descriptor.argumentTypeIndicator() );
-//	            line.append( ", default values = " ).append( descriptor.defaultValues() );
 	            line.append( System.getProperty( "line.separator" ) );
 	            return line.toString();
 	        }
@@ -84,50 +72,82 @@ public class BotManager {
 		
 		OptionSet options = parser.parse(args);
 		
-		if (options.has("s"))
-			server = (String) options.valueOf("s");
-		if (options.has("n"))
-			nBots = Integer.parseInt((String) options.valueOf("n"));
-		if (options.has("m"))
-			room = (String) options.valueOf("m");
-		if (options.has("p"))
-			securityKey = (String) options.valueOf("p");
+		if (options.has("help")) {
+			parser.printHelpOn( System.out );
+			return false;
+		}
+		if (options.has("server"))
+			server = (String) options.valueOf("server");
+		if (options.has("numbots"))
+			numbots = Integer.parseInt((String) options.valueOf("numbots"));
+		if (options.has("meeting"))
+			meeting = (String) options.valueOf("meeting");
+		if (options.has("key"))
+			securityKey = (String) options.valueOf("key");
 		if (options.has("meetings")) {
+			return printOpenMeetings();
+		}
+		if (options.has("create")) {
 			BigBlueButtonClient client = new BigBlueButtonClient();
 			client.createJoinService(server, securityKey);
 			JoinServiceBase joinService = client.getJoinService();
 			if (joinService == null) {
 				log.error("Can't connect to the server, please check the server address");
-				System.exit(1);
+				return false;
 			}
-			joinService.load();
-			List<Meeting> meetings = client.getJoinService().getMeetings();
-			if (meetings.isEmpty())
-				log.info("No open meetings");
-			else {
-				log.info("Open meetings:");
-				for (Meeting meeting : meetings) {
-					log.info(meeting.toString());
-				}
+			joinService.createMeeting((String) options.valueOf("create"));
+			return printOpenMeetings();
+		}
+		if (options.has("video"))
+			videoFilename = (String) options.valueOf("video");
+		if (options.has("name"))
+			name = (String) options.valueOf("name");
+		if (options.has("role")) {
+			role = ((String) options.valueOf("role")).toUpperCase();
+			if (!role.equals("MODERATOR") && !role.equals("VIEWER")) {
+				log.error("Invalid role selected: {}", role);
+				return false;
 			}
-			System.exit(0);
 		}
-		if (options.has("v"))
-			videoFileName = (String) options.valueOf("v");
-		if (options.has("help")) {
-			parser.printHelpOn( System.out );
-			System.exit(0);
-		}
+		return true;
 	}
-		
+	
+	private boolean printOpenMeetings() {
+		BigBlueButtonClient client = new BigBlueButtonClient();
+		client.createJoinService(server, securityKey);
+		JoinServiceBase joinService = client.getJoinService();
+		if (joinService == null) {
+			log.error("Can't connect to the server, please check the server address");
+			return false;
+		}
+		if (!joinService.load())
+			return false;
+		List<Meeting> meetings = client.getJoinService().getMeetings();
+		if (meetings.isEmpty())
+			log.info("No open meetings");
+		else {
+			log.info("Open meetings:");
+			for (Meeting meeting : meetings) {
+				log.info(meeting.toString());
+			}
+		}
+		return false;
+	}
+
 	public void spawnBots() {
-		DecimalFormat format = new DecimalFormat(new String(new char[Integer.toString(nBots).length()]).replace("\0", "0"));
-		for (int i = 1; i <= nBots; ++i) {
-			Bot bot = new Bot(server, securityKey, room, videoFileName);
+		DecimalFormat format = new DecimalFormat(new String(new char[Integer.toString(numbots).length()]).replace("\0", "0"));
+		for (int i = 1; i <= numbots; ++i) {
+			Bot bot = new Bot();
 			botArmy.add(bot);
-			bot.connect(format.format(i));
+			bot.connect(server, securityKey, meeting, name + " " + format.format(i), role.equals("MODERATOR"), videoFilename);
 		}
 	}
 
+	public static void main (String[] args) throws IOException {
+		BotManager master = new BotManager();
+		if (master.parse(args))
+			master.spawnBots();
+	}
+		
 }
 	

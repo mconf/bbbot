@@ -1,0 +1,16 @@
+Developed for Mconf
+Bot commands:
+[video]: video filename to be sent
+[meeting]: meeting id to spawn the bots
+[meetings]: displays the open rooms
+[help]: displays help information
+[name]: name of the bots [Bot]
+[role]: role of the bots in the conference (moderator|viewer) [MODERATOR]
+[create]: creates a new meeting
+[server]: server address
+[key]: server security key
+[numbots]: number of bots [1]
+
+
+
+To use the video feature, you need to install the Xuggler library (http://www.xuggle.com/xuggler/downloads/) and set properly the environment variables.

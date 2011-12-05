@@ -1,6 +1,5 @@
 package org.mconf.bbb.bot;
 
-import java.text.DecimalFormat;
 import java.util.Date;
 
 import org.mconf.bbb.BigBlueButtonClient;
@@ -19,33 +18,21 @@ public class Bot extends BigBlueButtonClient implements OnParticipantJoinedListe
 
 	private static final Logger log = LoggerFactory.getLogger(BotManager.class);
 	
-	private String name = "Bot";
-	private String server = "";
-	private String serverSalt = "";
-	private String room = "";	
-	private String videoFileName = "";
+	private String videoFilename;
 
-	public String getServer() { return server;	}
-	public String getRoom() { return room;	}
-	public String getVideoFileName() { return videoFileName;	}
-	
-	public Bot(String server, String serverSalt, String room, String videoFileName){
-		this.server = server;
-		this.serverSalt = serverSalt;
-		this.room = room;
-		this.videoFileName = videoFileName;
-	}
+	public boolean connect(String server, String securityKey, String meeting, String name, boolean moderator, String videoFilename) {
+		this.videoFilename = videoFilename;
 		
-	public boolean connect(String number) {
-		name = name + " " + number;
-		createJoinService(server, serverSalt);
+		createJoinService(server, securityKey);
 		JoinServiceBase joinService = getJoinService();
 		if (joinService == null) {
 			log.error("Can't connect to the server, please check the server address");
 			return false;
 		}
-		joinService.load();
-		joinService.join(room, name, true);
+		if (!joinService.load()) {
+			return false;
+		}
+		joinService.join(meeting, name, moderator);
 		if (joinService.getJoinedMeeting() != null) {
 			addParticipantJoinedListener(this);
 			if (connectBigBlueButton())
@@ -53,16 +40,16 @@ public class Bot extends BigBlueButtonClient implements OnParticipantJoinedListe
 			else 
 				return false;
 		} else {
-			System.out.println(name  + " failed to join the meeting");
+			log.error(name  + " failed to join the meeting");
 			System.exit(1);
 			return false;
 		}
 	}
-
+	
 	public void sendVideo() {
 		XugglerFlvReader reader = null;
 		try {
-			reader = new XugglerFlvReader(this.videoFileName);
+			reader = new XugglerFlvReader(this.videoFilename);
 		} catch (Exception e) {
 			e.printStackTrace();
 			return;
@@ -78,7 +65,7 @@ public class Bot extends BigBlueButtonClient implements OnParticipantJoinedListe
 	}
 	@Override
 	public void onParticipantJoined(IParticipant p) {
-		if (p.getUserId() == getMyUserId() && videoFileName != null && videoFileName.length() > 0)
+		if (p.getUserId() == getMyUserId() && videoFilename != null && videoFilename.length() > 0)
 			sendVideo();
 	}
 }
