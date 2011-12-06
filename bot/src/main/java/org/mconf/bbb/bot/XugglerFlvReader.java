@@ -59,8 +59,11 @@ public class XugglerFlvReader implements RtmpReader {
 		return !(container.open(filename, IContainer.Type.READ, null) < 0);
 	}
 
+    @Override
 	public int getWidth() { return videoCoder.getWidth(); }
-	public int getHeight() { return videoCoder.getHeight(); }
+
+    @Override
+    public int getHeight() { return videoCoder.getHeight(); }
 	
 	@Override
 	public void close() {

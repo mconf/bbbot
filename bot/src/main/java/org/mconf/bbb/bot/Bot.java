@@ -11,6 +11,8 @@ import org.mconf.bbb.video.BbbVideoPublisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.flazr.io.flv.FlvReader;
+import com.flazr.rtmp.RtmpReader;
 import com.flazr.rtmp.server.ServerStream.PublishType;
 
 
@@ -47,22 +49,34 @@ public class Bot extends BigBlueButtonClient implements OnParticipantJoinedListe
 	}
 	
 	public void sendVideo() {
-		XugglerFlvReader reader = null;
+		RtmpReader reader = null;
 		try {
-			reader = new XugglerFlvReader(this.videoFilename);
-		} catch (Exception e) {
-			e.printStackTrace();
-			return;
+			reader = new XugglerFlvReader(videoFilename);
+		} catch (Throwable e) {
+			log.error("You don't have Xuggler installed");
 		}
-    	String streamName = reader.getWidth() + "x" + reader.getHeight() + getMyUserId();
-    	if (getJoinService().getClass() == JoinService0Dot8.class)
-    		streamName += "-" + new Date().getTime();
 		
-		BbbVideoPublisher publisher = new BbbVideoPublisher(this, reader, streamName);
-		publisher.setLoop(true);
-		publisher.setPublishType(PublishType.RECORD);
-		publisher.start();
+		if (reader == null) {
+			try {
+				reader = new FlvReader(videoFilename);
+			} catch (Exception e) {
+				log.error("Can't create a FlvReader instance");
+				
+			}
+		}
+		
+		if (reader != null) {
+	    	String streamName = reader.getWidth() + "x" + reader.getHeight() + getMyUserId();
+	    	if (getJoinService().getClass() == JoinService0Dot8.class)
+	    		streamName += "-" + new Date().getTime();
+			
+			BbbVideoPublisher publisher = new BbbVideoPublisher(this, reader, streamName);
+			publisher.setLoop(true);
+			publisher.setPublishType(PublishType.RECORD);
+			publisher.start();
+		}
 	}
+	
 	@Override
 	public void onParticipantJoined(IParticipant p) {
 		if (p.getUserId() == getMyUserId() && videoFilename != null && videoFilename.length() > 0)
