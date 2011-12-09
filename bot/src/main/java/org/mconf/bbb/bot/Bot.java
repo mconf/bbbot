@@ -1,26 +1,38 @@
 package org.mconf.bbb.bot;
 
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.mconf.bbb.BigBlueButtonClient;
-import org.mconf.bbb.BigBlueButtonClient.OnParticipantJoinedListener;
+import org.mconf.bbb.BigBlueButtonClient.*;
 import org.mconf.bbb.api.JoinService0Dot8;
 import org.mconf.bbb.api.JoinServiceBase;
 import org.mconf.bbb.users.IParticipant;
 import org.mconf.bbb.video.BbbVideoPublisher;
+import org.mconf.bbb.video.BbbVideoReceiver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.flazr.io.flv.FlvReader;
 import com.flazr.rtmp.RtmpReader;
+import com.flazr.rtmp.message.Audio;
+import com.flazr.rtmp.message.Video;
 import com.flazr.rtmp.server.ServerStream.PublishType;
 
+public class Bot extends BigBlueButtonClient implements 
+		OnParticipantJoinedListener, 
+		OnParticipantLeftListener, 
+		OnParticipantStatusChangeListener, 
+		OnConnectedListener, 
+		OnAudioListener 
+{
 
-public class Bot extends BigBlueButtonClient implements OnParticipantJoinedListener {
-
-	private static final Logger log = LoggerFactory.getLogger(BotManager.class);
+	private static final Logger log = LoggerFactory.getLogger(Bot.class);
 	
 	private String videoFilename;
+
+	private Map<Integer, BbbVideoReceiver> remoteVideos = new HashMap<Integer, BbbVideoReceiver>();
 
 	public boolean connect(String server, String securityKey, String meeting, String name, boolean moderator, String videoFilename) {
 		this.videoFilename = videoFilename;
@@ -37,10 +49,10 @@ public class Bot extends BigBlueButtonClient implements OnParticipantJoinedListe
 		joinService.join(meeting, name, moderator);
 		if (joinService.getJoinedMeeting() != null) {
 			addParticipantJoinedListener(this);
-			if (connectBigBlueButton())
-				return true;
-			else 
-				return false;
+			addParticipantStatusChangeListener(this);
+			addConnectedListener(this);
+			addAudioListener(this);
+			return (connectBigBlueButton());
 		} else {
 			log.error(name  + " failed to join the meeting");
 			System.exit(1);
@@ -79,7 +91,78 @@ public class Bot extends BigBlueButtonClient implements OnParticipantJoinedListe
 	
 	@Override
 	public void onParticipantJoined(IParticipant p) {
-		if (p.getUserId() == getMyUserId() && videoFilename != null && videoFilename.length() > 0)
-			sendVideo();
+		if (p.getUserId() == getMyUserId()) { 
+			if (videoFilename != null && videoFilename.length() > 0)
+				sendVideo();
+		} else {
+			if (p.getStatus().isHasStream())
+				startReceivingVideo(p.getUserId());
+		}
+	}
+
+	@Override
+	public void onParticipantLeft(IParticipant p) {
+		if (p.getStatus().isHasStream())
+			stopReceivingVideo(p.getUserId());
+	}
+
+	@Override
+	public void onChangePresenter(IParticipant p) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void onChangeHasStream(IParticipant p) {
+		if (p.getUserId() == getMyUserId())
+			return;
+		
+		if (p.getStatus().isHasStream()) {
+			startReceivingVideo(p.getUserId());
+		} else {
+			stopReceivingVideo(p.getUserId());
+		}
+	}
+	
+	private void startReceivingVideo(int userId) {
+		BbbVideoReceiver videoReceiver = new BbbVideoReceiver(userId, this) {
+			
+			@Override
+			protected void onVideo(Video video) {
+				log.debug("received video package: {}", video.getHeader().getTime());
+			}
+		};
+		remoteVideos.put(userId, videoReceiver);
+		videoReceiver.start();
+	}
+	
+	private void stopReceivingVideo(int userId) {
+		BbbVideoReceiver videoReceiver = remoteVideos.get(userId);
+		if (videoReceiver != null) {
+			videoReceiver.stop();
+			remoteVideos.remove(userId);
+		}
+	}
+
+	@Override
+	public void onChangeRaiseHand(IParticipant p) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void onConnectedSuccessfully() {
+		connectVoice();
+	}
+
+	@Override
+	public void onConnectedUnsuccessfully() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void onAudio(Audio audio) {
+		log.debug("received audio package: {}", audio.getHeader().getTime());
 	}
 }
