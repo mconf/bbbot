@@ -2,13 +2,21 @@ package org.mconf.bbb.bot;
 
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.mconf.bbb.BigBlueButtonClient;
-import org.mconf.bbb.BigBlueButtonClient.*;
+import org.mconf.bbb.BigBlueButtonClient.OnAudioListener;
+import org.mconf.bbb.BigBlueButtonClient.OnConnectedListener;
+import org.mconf.bbb.BigBlueButtonClient.OnParticipantJoinedListener;
+import org.mconf.bbb.BigBlueButtonClient.OnParticipantLeftListener;
+import org.mconf.bbb.BigBlueButtonClient.OnParticipantStatusChangeListener;
+import org.mconf.bbb.BigBlueButtonClient.OnPublicChatMessageListener;
 import org.mconf.bbb.api.JoinService0Dot8;
 import org.mconf.bbb.api.JoinServiceBase;
+import org.mconf.bbb.chat.ChatMessage;
 import org.mconf.bbb.users.IParticipant;
+import org.mconf.bbb.users.Participant;
 import org.mconf.bbb.video.BbbVideoPublisher;
 import org.mconf.bbb.video.BbbVideoReceiver;
 import org.slf4j.Logger;
@@ -18,14 +26,14 @@ import com.flazr.io.flv.FlvReader;
 import com.flazr.rtmp.RtmpReader;
 import com.flazr.rtmp.message.Audio;
 import com.flazr.rtmp.message.Video;
-import com.flazr.rtmp.server.ServerStream.PublishType;
 
 public class Bot extends BigBlueButtonClient implements 
 		OnParticipantJoinedListener, 
 		OnParticipantLeftListener, 
 		OnParticipantStatusChangeListener, 
 		OnConnectedListener, 
-		OnAudioListener 
+		OnAudioListener,
+		OnPublicChatMessageListener
 {
 
 	private static final Logger log = LoggerFactory.getLogger(Bot.class);
@@ -52,6 +60,7 @@ public class Bot extends BigBlueButtonClient implements
 			addParticipantStatusChangeListener(this);
 			addConnectedListener(this);
 			addAudioListener(this);
+			addPublicChatMessageListener(this);
 			return (connectBigBlueButton());
 		} else {
 			log.error(name  + " failed to join the meeting");
@@ -73,7 +82,6 @@ public class Bot extends BigBlueButtonClient implements
 				reader = new FlvReader(videoFilename);
 			} catch (Exception e) {
 				log.error("Can't create a FlvReader instance");
-				
 			}
 		}
 		
@@ -84,7 +92,6 @@ public class Bot extends BigBlueButtonClient implements
 			
 			BbbVideoPublisher publisher = new BbbVideoPublisher(this, reader, streamName);
 			publisher.setLoop(true);
-			publisher.setPublishType(PublishType.RECORD);
 			publisher.start();
 		}
 	}
@@ -164,5 +171,17 @@ public class Bot extends BigBlueButtonClient implements
 	@Override
 	public void onAudio(Audio audio) {
 		log.debug("received audio package: {}", audio.getHeader().getTime());
+	}
+
+	@Override
+	public void onPublicChatMessage(ChatMessage message, IParticipant source) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void onPublicChatMessage(List<ChatMessage> publicChatMessages,
+			Map<Integer, Participant> participants) {
+		sendPublicChatMessage("Hi, this is a test");
 	}
 }
