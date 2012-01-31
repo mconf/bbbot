@@ -15,6 +15,7 @@ import org.mconf.bbb.BigBlueButtonClient.OnPublicChatMessageListener;
 import org.mconf.bbb.api.JoinService0Dot8;
 import org.mconf.bbb.api.JoinServiceBase;
 import org.mconf.bbb.chat.ChatMessage;
+import org.mconf.bbb.phone.BbbVoiceConnection;
 import org.mconf.bbb.users.IParticipant;
 import org.mconf.bbb.users.Participant;
 import org.mconf.bbb.video.BbbVideoPublisher;
@@ -24,7 +25,6 @@ import org.slf4j.LoggerFactory;
 
 import com.flazr.io.flv.FlvReader;
 import com.flazr.rtmp.RtmpReader;
-import com.flazr.rtmp.message.Audio;
 import com.flazr.rtmp.message.Video;
 
 public class Bot extends BigBlueButtonClient implements 
@@ -32,18 +32,22 @@ public class Bot extends BigBlueButtonClient implements
 		OnParticipantLeftListener, 
 		OnParticipantStatusChangeListener, 
 		OnConnectedListener, 
-		OnAudioListener,
 		OnPublicChatMessageListener
 {
 
 	private static final Logger log = LoggerFactory.getLogger(Bot.class);
 	
 	private String videoFilename;
+	private String voiceFilename;
+
+	public BbbVoiceConnection voiceConnection;
 
 	private Map<Integer, BbbVideoReceiver> remoteVideos = new HashMap<Integer, BbbVideoReceiver>();
 
-	public boolean connect(String server, String securityKey, String meeting, String name, boolean moderator, String videoFilename) {
+	public boolean connect(String server, String securityKey, String meeting, String name,
+						   boolean moderator, String videoFilename, String voiceFilename) {
 		this.videoFilename = videoFilename;
+		this.voiceFilename = voiceFilename;
 		
 		createJoinService(server, securityKey);
 		JoinServiceBase joinService = getJoinService();
@@ -59,7 +63,6 @@ public class Bot extends BigBlueButtonClient implements
 			addParticipantJoinedListener(this);
 			addParticipantStatusChangeListener(this);
 			addConnectedListener(this);
-			addAudioListener(this);
 			addPublicChatMessageListener(this);
 			return (connectBigBlueButton());
 		} else {
@@ -81,7 +84,7 @@ public class Bot extends BigBlueButtonClient implements
 			try {
 				reader = new FlvReader(videoFilename);
 			} catch (Exception e) {
-				log.error("Can't create a FlvReader instance");
+				log.error("Can't create a FlvReader instance for " + videoFilename);
 			}
 		}
 		
@@ -96,6 +99,22 @@ public class Bot extends BigBlueButtonClient implements
 		}
 	}
 	
+	private void connectVoice() {
+		RtmpReader reader = null;
+		if (voiceFilename != null && voiceFilename.length() > 0) {
+			try {
+				reader = new FlvReader(voiceFilename);
+			} catch (Exception e) {
+				e.printStackTrace();
+				log.error("Can't create a FlvReader instance for " + voiceFilename);
+			}
+		}
+
+		voiceConnection = new BbbVoiceConnection(this, reader);
+		voiceConnection.setLoop(true);
+		voiceConnection.start();
+	}
+
 	@Override
 	public void onParticipantJoined(IParticipant p) {
 		if (p.getUserId() == getMyUserId()) { 
@@ -166,11 +185,6 @@ public class Bot extends BigBlueButtonClient implements
 	public void onConnectedUnsuccessfully() {
 		// TODO Auto-generated method stub
 		
-	}
-
-	@Override
-	public void onAudio(Audio audio) {
-		log.debug("received audio package: {}", audio.getHeader().getTime());
 	}
 
 	@Override

@@ -29,6 +29,7 @@ public class BotManager {
 	private String meeting = "";
 	private List<Bot> botArmy = new ArrayList<Bot>();
 	private String videoFilename = null;
+	private String voiceFilename = null;
 	private String name = "Bot";
 	private String role = "MODERATOR";
 	
@@ -41,6 +42,7 @@ public class BotManager {
 		parser.accepts("server", "server address").withRequiredArg();
 		parser.accepts("key", "server security key").withRequiredArg();
 		parser.accepts("video", "video filename to be sent").withRequiredArg();
+		parser.accepts("voice", "voice filename to be sent").withRequiredArg();
 		parser.accepts("name", "name of the bots").withRequiredArg().defaultsTo(name);
 		parser.accepts("role", "role of the bots in the conference (moderator|viewer)").withRequiredArg().defaultsTo(role);
 		parser.accepts("help", "displays help information");
@@ -100,6 +102,8 @@ public class BotManager {
 		}
 		if (options.has("video"))
 			videoFilename = (String) options.valueOf("video");
+		if (options.has("voice"))
+			voiceFilename = (String) options.valueOf("voice");
 		if (options.has("name"))
 			name = (String) options.valueOf("name");
 		if (options.has("role")) {
@@ -139,7 +143,8 @@ public class BotManager {
 		for (int i = 1; i <= numbots; ++i) {
 			Bot bot = new Bot();
 			botArmy.add(bot);
-			bot.connect(server, securityKey, meeting, name + " " + format.format(i), role.equals("MODERATOR"), videoFilename);
+			bot.connect(server, securityKey, meeting, name + " " + format.format(i),
+					    role.equals("MODERATOR"), videoFilename, voiceFilename);
 		}
 	}
 
