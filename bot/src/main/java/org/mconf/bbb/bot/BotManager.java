@@ -138,17 +138,19 @@ public class BotManager {
 		return false;
 	}
 
-	public void spawnBots() {
+	public void spawnBots() throws InterruptedException {
 		DecimalFormat format = new DecimalFormat(new String(new char[Integer.toString(numbots).length()]).replace("\0", "0"));
 		for (int i = 1; i <= numbots; ++i) {
 			Bot bot = new Bot();
 			botArmy.add(bot);
+			log.info("CONECTING {}", name + " " + format.format(i));
 			bot.connect(server, securityKey, meeting, name + " " + format.format(i),
 					    role.equals("MODERATOR"), videoFilename, voiceFilename);
+			Thread.sleep(5000);
 		}
 	}
 
-	public static void main (String[] args) throws IOException {
+	public static void main (String[] args) throws IOException, InterruptedException {
 		BotManager master = new BotManager();
 		if (master.parse(args))
 			master.spawnBots();

@@ -1,12 +1,13 @@
 package org.mconf.bbb.bot;
 
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.mconf.bbb.BigBlueButtonClient;
-import org.mconf.bbb.BigBlueButtonClient.OnAudioListener;
 import org.mconf.bbb.BigBlueButtonClient.OnConnectedListener;
 import org.mconf.bbb.BigBlueButtonClient.OnParticipantJoinedListener;
 import org.mconf.bbb.BigBlueButtonClient.OnParticipantLeftListener;
@@ -74,11 +75,11 @@ public class Bot extends BigBlueButtonClient implements
 	
 	public void sendVideo() {
 		RtmpReader reader = null;
-		try {
-			reader = new XugglerFlvReader(videoFilename);
-		} catch (Throwable e) {
-			log.error("You don't have Xuggler installed");
-		}
+//		try {
+//			reader = new XugglerFlvReader(videoFilename);
+//		} catch (Throwable e) {
+//			log.warn("You don't have Xuggler installed");
+//		}
 		
 		if (reader == null) {
 			try {
@@ -155,7 +156,6 @@ public class Bot extends BigBlueButtonClient implements
 			
 			@Override
 			protected void onVideo(Video video) {
-				log.debug("received video package: {}", video.getHeader().getTime());
 			}
 		};
 		remoteVideos.put(userId, videoReceiver);
@@ -196,6 +196,6 @@ public class Bot extends BigBlueButtonClient implements
 	@Override
 	public void onPublicChatMessage(List<ChatMessage> publicChatMessages,
 			Map<Integer, Participant> participants) {
-		sendPublicChatMessage("Hi, this is a test");
+		sendPublicChatMessage("Logged in on " + new SimpleDateFormat("dd-MM-yyyy HH:mm:ss").format(Calendar.getInstance().getTime()).toString());
 	}
 }
