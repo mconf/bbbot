@@ -15,7 +15,7 @@ To use the bot run the jar file at `bot/bin/bbbot.jar`. See its options with:
 
 Command line example:
 
-    java -jar bin/bbbot.jar --meeting "Demo Meeting" --numbots 1 --server http://my-bbb-sever --key 03b07 --voice "audio_file_to_be_sent.flv" --video "video_file_to_be_sent.flv"
+    java -jar bin/bbbot.jar --meeting "Demo Meeting" --numbots 1 --server http://my-bbb-sever --key 03b07 --voice "etc/audio-sample.flv" --video "etc/video-sample.flv"
 
 
 Development
