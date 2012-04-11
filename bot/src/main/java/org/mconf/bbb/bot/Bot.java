@@ -56,7 +56,7 @@ public class Bot extends BigBlueButtonClient implements
 			log.error("Can't connect to the server, please check the server address");
 			return false;
 		}
-		if (!joinService.load()) {
+		if (joinService.load() != JoinServiceBase.E_OK) {
 			return false;
 		}
 		joinService.join(meeting, name, moderator);
@@ -156,6 +156,8 @@ public class Bot extends BigBlueButtonClient implements
 			
 			@Override
 			protected void onVideo(Video video) {
+				// it will log a message when it receives a video packet
+				super.onVideo(video);
 			}
 		};
 		remoteVideos.put(userId, videoReceiver);

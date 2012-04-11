@@ -124,7 +124,7 @@ public class BotManager {
 			log.error("Can't connect to the server, please check the server address");
 			return false;
 		}
-		if (!joinService.load())
+		if (joinService.load() != JoinServiceBase.E_OK)
 			return false;
 		List<Meeting> meetings = client.getJoinService().getMeetings();
 		if (meetings.isEmpty())
