@@ -41,7 +41,6 @@
 		<copy todir="target/${ant.project.name}/lib">
     		<fileset dir="../flazr/target/flazr/lib" />
 			<fileset dir="../bbb-java/target/bbb-java/lib" />
-			<fileset file="/usr/local/xuggler/share/java/jars/xuggle-xuggler.jar"/>
 		</copy>
         <mkdir dir="target/classes"/>        
 	    <javac srcdir="src/main/java" destdir="target/classes" debug="true" 
