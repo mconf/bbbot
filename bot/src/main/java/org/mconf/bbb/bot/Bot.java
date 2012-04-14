@@ -38,55 +38,31 @@ public class Bot extends BigBlueButtonClient implements
 
 	private static final Logger log = LoggerFactory.getLogger(Bot.class);
 	
-	private String videoFilename;
-	private String voiceFilename;
-
 	public BbbVoiceConnection voiceConnection;
 
 	private Map<Integer, BbbVideoReceiver> remoteVideos = new HashMap<Integer, BbbVideoReceiver>();
 
-	public boolean connect(String server, String securityKey, String meeting, String name,
-						   boolean moderator, String videoFilename, String voiceFilename) {
-		this.videoFilename = videoFilename;
-		this.voiceFilename = voiceFilename;
-		
-		createJoinService(server, securityKey);
-		JoinServiceBase joinService = getJoinService();
-		if (joinService == null) {
-			log.error("Can't connect to the server, please check the server address");
-			return false;
-		}
-		if (joinService.load() != JoinServiceBase.E_OK) {
-			return false;
-		}
-		joinService.join(meeting, name, moderator);
-		if (joinService.getJoinedMeeting() != null) {
-			addParticipantJoinedListener(this);
-			addParticipantStatusChangeListener(this);
-			addConnectedListener(this);
-			addPublicChatMessageListener(this);
-			return (connectBigBlueButton());
-		} else {
-			log.error(name  + " failed to join the meeting");
-			System.exit(1);
-			return false;
-		}
-	}
+	private String server;
+	private String securityKey;
+	private String meetingId;
+	private String name;
+	private boolean moderator;
+	private String videoFilename;
+	private String audioFilename;
+	private boolean sendVideo;
+	private boolean recvVideo;
+	private boolean sendAudio;
+	private boolean recvAudio;
+
+	private boolean create;
 	
-	public void sendVideo() {
+	private void sendVideo() {
 		RtmpReader reader = null;
-//		try {
-//			reader = new XugglerFlvReader(videoFilename);
-//		} catch (Throwable e) {
-//			log.warn("You don't have Xuggler installed");
-//		}
-		
-		if (reader == null) {
-			try {
-				reader = new FlvReader(videoFilename);
-			} catch (Exception e) {
-				log.error("Can't create a FlvReader instance for " + videoFilename);
-			}
+
+		try {
+			reader = new FlvReader(videoFilename);
+		} catch (Exception e) {
+			log.error("Can't create a FlvReader instance for " + videoFilename);
 		}
 		
 		if (reader != null) {
@@ -102,12 +78,12 @@ public class Bot extends BigBlueButtonClient implements
 	
 	private void connectVoice() {
 		RtmpReader reader = null;
-		if (voiceFilename != null && voiceFilename.length() > 0) {
+		if (audioFilename != null && audioFilename.length() > 0 && sendAudio) {
 			try {
-				reader = new FlvReader(voiceFilename);
+				reader = new FlvReader(audioFilename);
 			} catch (Exception e) {
 				e.printStackTrace();
-				log.error("Can't create a FlvReader instance for " + voiceFilename);
+				log.error("Can't create a FlvReader instance for " + audioFilename);
 			}
 		}
 
@@ -119,17 +95,17 @@ public class Bot extends BigBlueButtonClient implements
 	@Override
 	public void onParticipantJoined(IParticipant p) {
 		if (p.getUserId() == getMyUserId()) { 
-			if (videoFilename != null && videoFilename.length() > 0)
+			if (videoFilename != null && videoFilename.length() > 0 && sendVideo)
 				sendVideo();
 		} else {
-			if (p.getStatus().isHasStream())
+			if (p.getStatus().isHasStream() && recvVideo)
 				startReceivingVideo(p.getUserId());
 		}
 	}
 
 	@Override
 	public void onParticipantLeft(IParticipant p) {
-		if (p.getStatus().isHasStream())
+		if (p.getStatus().isHasStream() && recvVideo)
 			stopReceivingVideo(p.getUserId());
 	}
 
@@ -144,10 +120,12 @@ public class Bot extends BigBlueButtonClient implements
 		if (p.getUserId() == getMyUserId())
 			return;
 		
-		if (p.getStatus().isHasStream()) {
-			startReceivingVideo(p.getUserId());
-		} else {
-			stopReceivingVideo(p.getUserId());
+		if (recvVideo) {
+			if (p.getStatus().isHasStream()) {
+				startReceivingVideo(p.getUserId());
+			} else {
+				stopReceivingVideo(p.getUserId());
+			}
 		}
 	}
 	
@@ -180,7 +158,8 @@ public class Bot extends BigBlueButtonClient implements
 
 	@Override
 	public void onConnectedSuccessfully() {
-		connectVoice();
+		if (recvAudio || sendAudio)
+			connectVoice();
 	}
 
 	@Override
@@ -199,5 +178,80 @@ public class Bot extends BigBlueButtonClient implements
 	public void onPublicChatMessage(List<ChatMessage> publicChatMessages,
 			Map<Integer, Participant> participants) {
 		sendPublicChatMessage("Logged in on " + new SimpleDateFormat("dd-MM-yyyy HH:mm:ss").format(Calendar.getInstance().getTime()).toString());
+	}
+
+	public void setServer(String server) {
+		this.server = server;
+	}
+
+	public void setSecurityKey(String securityKey) {
+		this.securityKey = securityKey;
+	}
+
+	public void setMeetingId(String meetingId) {
+		this.meetingId = meetingId;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public void setRole(String role) {
+		this.moderator = role.equals("moderator");
+	}
+
+	public void setVideoFilename(String videoFilename) {
+		this.videoFilename = videoFilename;
+	}
+
+	public void setAudioFilename(String audioFilename) {
+		this.audioFilename = audioFilename;
+	}
+
+	public void setSendVideo(boolean sendVideo) {
+		this.sendVideo = sendVideo;
+	}
+
+	public void setReceiveVideo(boolean recvVideo) {
+		this.recvVideo = recvVideo;
+	}
+
+	public void setSendAudio(boolean sendAudio) {
+		this.sendAudio = sendAudio;
+	}
+
+	public void setReceiveAudio(boolean recvAudio) {
+		this.recvAudio = recvAudio;
+	}
+
+	public void start() {
+		createJoinService(server, securityKey);
+		JoinServiceBase joinService = getJoinService();
+		if (joinService == null) {
+			log.error("Can't connect to the server, please check the server address");
+			return;
+		}
+		if (create && joinService.createMeeting(meetingId) != JoinServiceBase.E_OK) {
+			return;
+		}
+		if (joinService.load() != JoinServiceBase.E_OK) {
+			return;
+		}
+		if (joinService.join(meetingId, name, moderator) != JoinServiceBase.E_OK) {
+			return;
+		}
+		if (joinService.getJoinedMeeting() != null) {
+			addParticipantJoinedListener(this);
+			addParticipantStatusChangeListener(this);
+			addConnectedListener(this);
+			addPublicChatMessageListener(this);
+			connectBigBlueButton();
+		} else {
+			log.error(name  + " failed to join the meeting");
+		}
+	}
+
+	public void setCreateMeeting(boolean create) {
+		this.create = create;
 	}
 }

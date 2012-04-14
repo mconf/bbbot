@@ -95,7 +95,7 @@
 				</archives>
 		    </restrict>
             <manifest>
-                <attribute name="Main-Class" value="org.mconf.bbb.bot.BotManager"/>
+                <attribute name="Main-Class" value="org.mconf.bbb.bot.BotLauncher"/>
             	<attribute name="Class-Path" value="."/>
             </manifest>	
         </jar>
