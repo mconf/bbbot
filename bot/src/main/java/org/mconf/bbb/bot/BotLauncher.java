@@ -56,7 +56,7 @@ public class BotLauncher {
 	@Parameter(names = "--key", description = "Server security key", required = true)
 	private String securityKey;
 	@Parameter(names = "--meeting", description = "Meeting ID to spawn the bots")
-	private String meeting = null;
+	private String meeting = "Test meeting";
 	@Parameter(names = "--video", description = "Video filename to be sent")
 	private String videoFilename = null;
 	@Parameter(names = "--audio", description = "Audio filename to be sent")
@@ -91,6 +91,7 @@ public class BotLauncher {
 	private boolean everyone_receives_audio = true;
 	
 	private List<Bot> botArmy = new ArrayList<Bot>();
+	private HashMap<Integer, Double> prob_acc;
 
 	private boolean parse(String[] args) throws IOException {
 		JCommander parser = new JCommander(this);
@@ -113,6 +114,15 @@ public class BotLauncher {
 			probabilities.put(7, 1.0);
 			probabilities.put(10, 1.0);
 		}
+		
+		double acc = 0.0;
+		prob_acc = new HashMap<Integer, Double>();
+		for (Entry<Integer, Double> entry : probabilities.entrySet()) {
+			acc += entry.getValue();
+			prob_acc.put(entry.getKey(), acc);
+		}
+		log.debug("Accumulated probabilities: {}", prob_acc.toString());
+		
 		role = role.toLowerCase();
 
 		if (command_meetings) {
@@ -150,7 +160,7 @@ public class BotLauncher {
 		
 		Random seed = new Random();
 		DecimalFormat name_format = new DecimalFormat(new String(new char[Integer.toString(numbots).length()]).replace("\0", "0"));
-		DecimalFormat meeting_format = new DecimalFormat(new String(new char[Integer.toString(numbots).length()]).replace("\0", "0"));
+		DecimalFormat meeting_format = new DecimalFormat(new String(new char[3]).replace("\0", "0"));
 		
 		int meeting_index = 0;
 		int remaining_bots = 0;
@@ -163,7 +173,7 @@ public class BotLauncher {
 				if (remaining_bots == 0) {
 					meeting_index += 1;
 					double p = seed.nextDouble() * 100;
-					for (Entry<Integer, Double> entry : probabilities.entrySet()) {
+					for (Entry<Integer, Double> entry : prob_acc.entrySet()) {
 						if (p < entry.getValue()) {
 							remaining_bots = entry.getKey();
 							log.debug("p = {}", p);

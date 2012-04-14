@@ -10,15 +10,13 @@ class ProbabilitiesConverter implements IStringConverter<Map<Integer, Double>> {
 	public Map<Integer, Double> convert(String value) {
 		Map<Integer, Double> map = new HashMap<Integer, Double>();
 		String[] values = value.split(";");
-		double acc = 0.0;
 		for (String tmp : values) {
 			String[] pair = tmp.split(":");
 			
 			int k = Integer.parseInt(pair[0]);
 			double v = Double.parseDouble(pair[1]);
 			
-			acc += v;
-			map.put(k, acc);
+			map.put(k, v);
 		}
 		return map;
 	}
