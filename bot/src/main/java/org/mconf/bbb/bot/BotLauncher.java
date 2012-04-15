@@ -31,21 +31,25 @@ public class BotLauncher {
 				.append("\nmeeting: ").append(meeting)
 				.append("\nvideoFilename: ").append(videoFilename)
 				.append("\nvoiceFilename: ").append(voiceFilename)
-				.append("\ncommand_meetings: ").append(command_meetings)
+				.append("\nget_meetings: ").append(get_meetings)
 				.append("\ncommand_create: ").append(command_create)
 				.append("\nname: ").append(name).append("\nrole: ")
 				.append(role).append("\nprobabilities: ").append(probabilities)
 				.append("\ninterval: ").append(interval)
 				.append("\nsingle_meeting: ").append(single_meeting)
-				.append("\neveryone_send_video: ").append(everyone_sends_video)
-				.append("\nonly_one_send_video: ").append(only_one_sends_video)
-				.append("\neveryone_receive_video: ")
+				.append("\neveryone_sends_video: ")
+				.append(everyone_sends_video)
+				.append("\nonly_one_sends_video: ")
+				.append(only_one_sends_video)
+				.append("\neveryone_receives_video: ")
 				.append(everyone_receives_video)
-				.append("\neveryone_send_audio: ").append(everyone_sends_audio)
-				.append("\nonly_one_send_audio: ").append(only_one_sends_audio)
-				.append("\neveryone_receive_audio: ")
+				.append("\neveryone_sends_audio: ")
+				.append(everyone_sends_audio)
+				.append("\nonly_one_sends_audio: ")
+				.append(only_one_sends_audio)
+				.append("\neveryone_receives_audio: ")
 				.append(everyone_receives_audio).append("\nbotArmy: ")
-				.append(botArmy);
+				.append(botArmy).append("\nprob_acc: ").append(prob_acc);
 		return builder.toString();
 	}
 
@@ -61,8 +65,8 @@ public class BotLauncher {
 	private String videoFilename = null;
 	@Parameter(names = "--audio", description = "Audio filename to be sent")
 	private String voiceFilename = null;
-	@Parameter(names = "--meetings", description = "Displays the open rooms")
-	private boolean command_meetings = false;
+	@Parameter(names = "--get_meetings", description = "Displays the open rooms")
+	private boolean get_meetings = false;
 	@Parameter(names = "--create", arity = 1, description = "If the meeting specified by --meeting doesn't exists, the bot will create it before join", validateWith = BooleanValidator.class)
 	private boolean command_create = true;
 	@Parameter(names = "--name", description = "Prefix of the bots followed by a number")
@@ -125,7 +129,7 @@ public class BotLauncher {
 		
 		role = role.toLowerCase();
 
-		if (command_meetings) {
+		if (get_meetings) {
 			BigBlueButtonClient client = new BigBlueButtonClient();
 			client.createJoinService(server, securityKey);
 			JoinServiceBase joinService = client.getJoinService();
