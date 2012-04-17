@@ -168,7 +168,7 @@ public class BotLauncher {
 		
 		int meeting_index = 0;
 		int remaining_bots = 0;
-		boolean first_in_the_room = false;
+		boolean first_in_the_room = true;
 		for (int bot_index = 1; bot_index <= numbots; ++bot_index) {
 			String instance_meeting;
 			if (single_meeting) {
