@@ -55,15 +55,18 @@ public class Bot extends BigBlueButtonClient implements
 	private boolean recvAudio;
 
 	private boolean create;
+
+	private RtmpReader videoReader;
 	
 	private void sendVideo() {
-		RtmpReader reader = null;
+		RtmpReader reader = videoReader;
+//		RtmpReader reader = null;
 
-		try {
-			reader = new FlvReader(videoFilename);
-		} catch (Exception e) {
-			log.error("Can't create a FlvReader instance for " + videoFilename);
-		}
+//		try {
+//			reader = new FlvReader(videoFilename);
+//		} catch (Exception e) {
+//			log.error("Can't create a FlvReader instance for " + videoFilename);
+//		}
 		
 		if (reader != null) {
 	    	String streamName = reader.getWidth() + "x" + reader.getHeight() + getMyUserId();
@@ -253,5 +256,10 @@ public class Bot extends BigBlueButtonClient implements
 
 	public void setCreateMeeting(boolean create) {
 		this.create = create;
+	}
+
+	public void setVideoReader(RtmpReader reader) {
+		this.videoReader = reader;
+		
 	}
 }

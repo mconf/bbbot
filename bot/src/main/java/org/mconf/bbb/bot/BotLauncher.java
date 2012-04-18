@@ -160,6 +160,8 @@ public class BotLauncher {
 			return;
 		}
 		
+		GlobalFlvReader reader = new GlobalFlvReader(videoFilename);
+		
 		log.info("Running with the following configuration:\n{}", toString());
 		
 		Random seed = new Random();
@@ -208,6 +210,7 @@ public class BotLauncher {
 			bot.setSendAudio(everyone_sends_audio || (only_one_sends_audio && first_in_the_room));
 			bot.setReceiveAudio(everyone_receives_audio);
 			bot.setCreateMeeting(command_create);
+			bot.setVideoReader(reader);
 			
 			bot.start();
 
