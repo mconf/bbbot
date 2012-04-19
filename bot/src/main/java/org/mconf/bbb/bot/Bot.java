@@ -56,10 +56,11 @@ public class Bot extends BigBlueButtonClient implements
 
 	private boolean create;
 
-	private RtmpReader videoReader;
+	private FlvPreLoader videoLoader;
+	private BbbVideoPublisher videoPublisher;
 	
 	private void sendVideo() {
-		RtmpReader reader = videoReader;
+		RtmpReader reader = new GlobalFlvReader(videoLoader);
 //		RtmpReader reader = null;
 
 //		try {
@@ -73,9 +74,9 @@ public class Bot extends BigBlueButtonClient implements
 	    	if (getJoinService().getClass() == JoinService0Dot8.class)
 	    		streamName += "-" + new Date().getTime();
 			
-			BbbVideoPublisher publisher = new BbbVideoPublisher(this, reader, streamName);
-			publisher.setLoop(true);
-			publisher.start();
+			videoPublisher = new BbbVideoPublisher(this, reader, streamName);
+			videoPublisher.setLoop(true);
+			videoPublisher.start();
 		}
 	}
 	
@@ -258,8 +259,21 @@ public class Bot extends BigBlueButtonClient implements
 		this.create = create;
 	}
 
-	public void setVideoReader(RtmpReader reader) {
-		this.videoReader = reader;
+	public void setVideoLoader(FlvPreLoader loader) {
+		this.videoLoader = loader;
 		
+	}
+
+	@Override
+	public void disconnect() {
+		for (BbbVideoReceiver receiver : remoteVideos.values())
+			receiver.stop();
+		remoteVideos.clear();
+		
+		if (videoPublisher != null)
+			videoPublisher.stop();
+		if (voiceConnection != null)
+			voiceConnection.stop();
+		super.disconnect();
 	}
 }

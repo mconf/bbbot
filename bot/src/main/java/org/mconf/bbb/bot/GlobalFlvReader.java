@@ -1,14 +1,9 @@
 package org.mconf.bbb.bot;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.flazr.io.flv.FlvReader;
+import com.flazr.io.flv.FlvAtom;
 import com.flazr.rtmp.RtmpMessage;
 import com.flazr.rtmp.RtmpReader;
 import com.flazr.rtmp.message.Metadata;
@@ -17,45 +12,21 @@ public class GlobalFlvReader implements RtmpReader {
 	
     private static final Logger logger = LoggerFactory.getLogger(GlobalFlvReader.class);
 
-    private final FlvReader reader;
-	private final List<RtmpMessage> messages;
-	private final Map<Long, Integer> indexMap;
+    private int frameIndex = 0;
+    private final FlvPreLoader loader;
 	
-	public GlobalFlvReader(final String path) {
-		reader = new FlvReader(path);
-		messages = new ArrayList<RtmpMessage>();
-		while (reader.hasNext()) {
-			messages.add(reader.next());
-		}
-		reader.close();
-		indexMap = new HashMap<Long, Integer>();
+	public GlobalFlvReader(FlvPreLoader loader) {
+		this.loader = loader;
 	}
 
-	private synchronized int getMessageIndex() {
-		long threadId = Thread.currentThread().getId();
-		Integer index = indexMap.get(threadId);
-		if (index == null) {
-			indexMap.put(threadId, 0);
-			index = 0;
-		}
-//		logger.debug("getMessageIndex: {} -> {}", threadId, index);
-		return index;
-	}
-	
-	private synchronized void setMessageIndex(int index) {
-		long threadId = Thread.currentThread().getId();
-		indexMap.put(threadId, index);
-//		logger.debug("setMessageIndex: {} -> {}", threadId, index);
-	}
-	
 	@Override
 	public Metadata getMetadata() {
-		return reader.getMetadata();
+		return loader.getReader().getMetadata();
 	}
 
 	@Override
 	public RtmpMessage[] getStartMessages() {
-		return reader.getStartMessages();
+		return loader.getReader().getStartMessages();
 	}
 
 	@Override
@@ -64,7 +35,7 @@ public class GlobalFlvReader implements RtmpReader {
 
 	@Override
 	public long getTimePosition() {
-		RtmpMessage message = messages.get(getMessageIndex());
+		RtmpMessage message = loader.getMessages().get(frameIndex);
 		return message.getHeader().getTime();
 	}
 
@@ -72,10 +43,10 @@ public class GlobalFlvReader implements RtmpReader {
 	public long seek(long timePosition) {
         logger.debug("trying to seek to: {}", timePosition);
         if(timePosition == 0) { // special case
-        	setMessageIndex(0);
+        	frameIndex = 0;
         	return 0;
         }
-        final long start = getTimePosition();        
+        final long start = getTimePosition();
         if(timePosition > start) {
             while(hasNext()) {
                 final RtmpMessage cursor = next();
@@ -101,38 +72,34 @@ public class GlobalFlvReader implements RtmpReader {
 
 	@Override
 	public boolean hasNext() {
-        logger.debug("=======================> {} hasNext", Thread.currentThread().getId());
-		return getMessageIndex() < messages.size();
+		return frameIndex < loader.getMessages().size();
 	}
 
 	private boolean hasPrev() {
-		return getMessageIndex() > 0;
+		return frameIndex > 0;
 	}
 	
 	@Override
 	public RtmpMessage next() {
-		int index = getMessageIndex();
-		RtmpMessage message = messages.get(index);
-		setMessageIndex(index + 1);
-        logger.debug("=======================> {} -> {}", Thread.currentThread().getId(), message.getHeader().getTime());
-		return message;
+		RtmpMessage message = loader.getMessages().get(frameIndex);
+		frameIndex++;
+		return new FlvAtom(message.getHeader().getMessageType(), message.getHeader().getTime(), message.encode().copy());
 	}
 	
 	private RtmpMessage prev() {
-		int index = getMessageIndex() - 1;
-		RtmpMessage message = messages.get(index);
-		setMessageIndex(index);
-		return message;
+		frameIndex--;
+		RtmpMessage message = loader.getMessages().get(frameIndex);
+		return new FlvAtom(message.getHeader().getMessageType(), message.getHeader().getTime(), message.encode().copy());
 	}
 
 	@Override
 	public int getWidth() {
-		return reader.getWidth();
+		return loader.getReader().getWidth();
 	}
 
 	@Override
 	public int getHeight() {
-		return reader.getHeight();
+		return loader.getReader().getHeight();
 	}
 
 }

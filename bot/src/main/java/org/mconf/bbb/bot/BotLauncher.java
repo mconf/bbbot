@@ -2,7 +2,9 @@
 //Adding video to the bots through Xuggler library, September 2011.
 package org.mconf.bbb.bot;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -81,17 +83,17 @@ public class BotLauncher {
 	@Parameter(names = "--single_meeting", arity = 1, description = "If set, all the bots will join the same room specified by --meeting", validateWith = BooleanValidator.class)
 	private boolean single_meeting = false;
 	
-	@Parameter(names = "--everyone_sends_video", description = "If [true], all the bots will send the video file specified by --video", validateWith = BooleanValidator.class)
+	@Parameter(names = "--everyone_sends_video", arity = 1, description = "If [true], all the bots will send the video file specified by --video", validateWith = BooleanValidator.class)
 	private boolean everyone_sends_video = false;
-	@Parameter(names = "--only_one_sends_video", description = "If [true], only one bot will send the video file specified by --video", validateWith = BooleanValidator.class)
+	@Parameter(names = "--only_one_sends_video", arity = 1, description = "If [true], only one bot will send the video file specified by --video", validateWith = BooleanValidator.class)
 	private boolean only_one_sends_video = true;
-	@Parameter(names = "--everyone_receives_video", description = "If [true], all the bots will receive the video stream from the others", validateWith = BooleanValidator.class)
+	@Parameter(names = "--everyone_receives_video", arity = 1, description = "If [true], all the bots will receive the video stream from the others", validateWith = BooleanValidator.class)
 	private boolean everyone_receives_video = true;
-	@Parameter(names = "--everyone_sends_audio", description = "If [true], all the bots will send the audio file specified by --audio", validateWith = BooleanValidator.class)
+	@Parameter(names = "--everyone_sends_audio", arity = 1, description = "If [true], all the bots will send the audio file specified by --audio", validateWith = BooleanValidator.class)
 	private boolean everyone_sends_audio = false;
-	@Parameter(names = "--only_one_sends_audio", description = "If [true], only one bot will send the audio file specified by --audio", validateWith = BooleanValidator.class)
+	@Parameter(names = "--only_one_sends_audio", arity = 1, description = "If [true], only one bot will send the audio file specified by --audio", validateWith = BooleanValidator.class)
 	private boolean only_one_sends_audio = true;
-	@Parameter(names = "--everyone_receives_audio", description = "If [true], all the bots will receive the audio stream from the others", validateWith = BooleanValidator.class)
+	@Parameter(names = "--everyone_receives_audio", arity = 1, description = "If [true], all the bots will receive the audio stream from the others", validateWith = BooleanValidator.class)
 	private boolean everyone_receives_audio = true;
 	
 	private List<Bot> botArmy = new ArrayList<Bot>();
@@ -160,70 +162,97 @@ public class BotLauncher {
 			return;
 		}
 		
-		GlobalFlvReader reader = new GlobalFlvReader(videoFilename);
-		
-		log.info("Running with the following configuration:\n{}", toString());
-		
-		Random seed = new Random();
-		DecimalFormat name_format = new DecimalFormat(new String(new char[Integer.toString(numbots).length()]).replace("\0", "0"));
-		DecimalFormat meeting_format = new DecimalFormat(new String(new char[3]).replace("\0", "0"));
-		
-		int meeting_index = 0;
-		int remaining_bots = 0;
-		boolean first_in_the_room = true;
-		for (int bot_index = 1; bot_index <= numbots; ++bot_index) {
-			String instance_meeting;
-			if (single_meeting) {
-				instance_meeting = meeting;
-			} else {
-				if (remaining_bots == 0) {
-					meeting_index += 1;
-					double p = seed.nextDouble() * 100;
-					for (Entry<Integer, Double> entry : prob_acc.entrySet()) {
-						if (p < entry.getValue()) {
-							remaining_bots = entry.getKey();
-							log.debug("p = {}", p);
-							break;
+		final Thread thread = new Thread(new Runnable() {
+			
+			@Override
+			public void run() {
+				FlvPreLoader loader = new FlvPreLoader(videoFilename);
+				
+				log.info("Running with the following configuration:\n{}", BotLauncher.this.toString());
+				
+				Random seed = new Random();
+				DecimalFormat name_format = new DecimalFormat(new String(new char[Integer.toString(numbots).length()]).replace("\0", "0"));
+				DecimalFormat meeting_format = new DecimalFormat(new String(new char[3]).replace("\0", "0"));
+				
+				int meeting_index = 0;
+				int remaining_bots = 0;
+				boolean first_in_the_room = true;
+				for (int bot_index = 1; bot_index <= numbots; ++bot_index) {
+					String instance_meeting;
+					if (single_meeting) {
+						instance_meeting = meeting;
+					} else {
+						if (remaining_bots == 0) {
+							meeting_index += 1;
+							double p = seed.nextDouble() * 100;
+							for (Entry<Integer, Double> entry : prob_acc.entrySet()) {
+								if (p < entry.getValue()) {
+									remaining_bots = entry.getKey();
+									log.debug("p = {}", p);
+									break;
+								}
+							}
+							log.info("The next room will have {} participants", remaining_bots);
+							first_in_the_room = true;
 						}
+						instance_meeting = meeting + " " + meeting_format.format(meeting_index);
+						remaining_bots -= 1;
 					}
-					log.info("The next room will have {} participants", remaining_bots);
-					first_in_the_room = true;
-				}
-				instance_meeting = meeting + " " + meeting_format.format(meeting_index);
-				remaining_bots -= 1;
-			}
-			
-			Bot bot = new Bot();
-			botArmy.add(bot);
-			String instance_name = name + " " + name_format.format(bot_index);
-			
-			log.info("Connecting a new bot called {} to the room {}", instance_name, instance_meeting);
-			bot.setServer(server);
-			bot.setSecurityKey(securityKey);
-			bot.setMeetingId(instance_meeting);
-			bot.setName(instance_name);
-			bot.setRole(role);
-			bot.setVideoFilename(videoFilename);
-			bot.setAudioFilename(voiceFilename);
-			bot.setSendVideo(everyone_sends_video || (only_one_sends_video && first_in_the_room));
-			bot.setReceiveVideo(everyone_receives_video);
-			bot.setSendAudio(everyone_sends_audio || (only_one_sends_audio && first_in_the_room));
-			bot.setReceiveAudio(everyone_receives_audio);
-			bot.setCreateMeeting(command_create);
-			bot.setVideoReader(reader);
-			
-			bot.start();
+					
+					Bot bot = new Bot();
+					botArmy.add(bot);
+					String instance_name = name + " " + name_format.format(bot_index);
+					
+					log.info("Connecting a new bot called {} to the room {}", instance_name, instance_meeting);
+					bot.setServer(server);
+					bot.setSecurityKey(securityKey);
+					bot.setMeetingId(instance_meeting);
+					bot.setName(instance_name);
+					bot.setRole(role);
+					bot.setVideoFilename(videoFilename);
+					bot.setAudioFilename(voiceFilename);
+					bot.setSendVideo(everyone_sends_video || (only_one_sends_video && first_in_the_room));
+					bot.setReceiveVideo(everyone_receives_video);
+					bot.setSendAudio(everyone_sends_audio || (only_one_sends_audio && first_in_the_room));
+					bot.setReceiveAudio(everyone_receives_audio);
+					bot.setCreateMeeting(command_create);
+					bot.setVideoLoader(loader);
+					
+					bot.start();
 
-			if (interval > 0)
-				Thread.sleep(interval);
-			first_in_the_room = false;
+					if (interval > 0)
+						try {
+							Thread.sleep(interval);
+						} catch (InterruptedException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+					first_in_the_room = false;
+				}
+			}
+		});
+		thread.start();
+		
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		try {
+			String s = br.readLine();
+			System.out.println(s);
+		} catch (IOException exception) {
 		}
+		
+		thread.join();
+
+		for (Bot bot : botArmy) {
+			bot.disconnect();
+		}
+		botArmy.clear();
 	}
 
 	public static void main (String[] args) throws IOException, InterruptedException {
 		BotLauncher master = new BotLauncher();
-		if (master.parse(args))
+		if (master.parse(args)) {
 			master.spawnBots();
+		}
 	}
 		
 }
