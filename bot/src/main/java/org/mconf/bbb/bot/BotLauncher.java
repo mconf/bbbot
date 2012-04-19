@@ -215,7 +215,7 @@ public class BotLauncher {
 					bot.setReceiveVideo(everyone_receives_video);
 					bot.setSendAudio(everyone_sends_audio || (only_one_sends_audio && first_in_the_room));
 					bot.setReceiveAudio(everyone_receives_audio);
-					bot.setCreateMeeting(command_create);
+					bot.setCreateMeeting(command_create && first_in_the_room);
 					bot.setVideoLoader(loader);
 					
 					bot.start();
