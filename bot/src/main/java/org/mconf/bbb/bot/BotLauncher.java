@@ -22,6 +22,8 @@ import org.slf4j.LoggerFactory;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 
+import org.mconf.bbb.bot.ProbabilitiesConverter;
+
 public class BotLauncher {
 	private static final Logger log = LoggerFactory.getLogger(BotLauncher.class);
 
@@ -75,7 +77,7 @@ public class BotLauncher {
 	private String name = "Bot";
 	@Parameter(names = "--role", description = "Role of the bots in the conference (moderator|viewer)", validateWith = RoleValidator.class)
 	private String role = "moderator";
-	@Parameter(names = "--probabilities", description = "Specifies the probabilities for number of users per meeting", validateWith = ProbabilitiesValidator.class)
+	@Parameter(names = "--probabilities", description = "Specifies the probabilities for number of users per meeting", validateWith = ProbabilitiesValidator.class, converter = ProbabilitiesConverter.class)
 	private Map<Integer, Double> probabilities;
 	
 	@Parameter(names = "--interval", description = "Interval between the launch of each bot (in milliseconds)")
@@ -184,12 +186,14 @@ public class BotLauncher {
 					} else {
 						if (remaining_bots == 0) {
 							meeting_index += 1;
-							double p = seed.nextDouble() * 100;
-							for (Entry<Integer, Double> entry : prob_acc.entrySet()) {
-								if (p < entry.getValue()) {
-									remaining_bots = entry.getKey();
-									log.debug("p = {}", p);
-									break;
+							while (remaining_bots == 0) {
+								double p = seed.nextDouble() * 100;
+								for (Entry<Integer, Double> entry : prob_acc.entrySet()) {
+									if (p < entry.getValue()) {
+										remaining_bots = entry.getKey();
+										log.debug("p = {}", p);
+										break;
+									}
 								}
 							}
 							log.info("The next room will have {} participants", remaining_bots);

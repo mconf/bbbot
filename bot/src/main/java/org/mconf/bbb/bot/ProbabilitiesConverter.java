@@ -5,7 +5,7 @@ import java.util.Map;
 
 import com.beust.jcommander.IStringConverter;
 
-class ProbabilitiesConverter implements IStringConverter<Map<Integer, Double>> {
+public class ProbabilitiesConverter implements IStringConverter<Map<Integer, Double>> {
 	@Override
 	public Map<Integer, Double> convert(String value) {
 		Map<Integer, Double> map = new HashMap<Integer, Double>();

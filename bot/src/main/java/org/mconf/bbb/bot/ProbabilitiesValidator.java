@@ -21,7 +21,7 @@ public class ProbabilitiesValidator implements IParameterValidator {
 				throw new ParameterException("Parameter " + name + " should be composed by semicolon (;) separated pairs [number of users]:[probability] (found invalid pair " + tmp +")");
 			}
 		}
-		if (acc != 100.0) {
+		if (Math.ceil(acc) != 100.0) {
 			throw new ParameterException("Parameter " + name + " should sum 100% (found " + acc + "%)");
 		}
 	}
