@@ -236,12 +236,15 @@ public class Bot extends BigBlueButtonClient implements
 			return;
 		}
 		if (create && joinService.createMeeting(meetingId) != JoinServiceBase.E_OK) {
-			return;
+			log.error("Can't create the room {}, but I will continue on my task", meetingId);
+//			return;
 		}
 		if (joinService.load() != JoinServiceBase.E_OK) {
+			log.error("Can't load the join service");
 			return;
 		}
 		if (joinService.join(meetingId, name, moderator) != JoinServiceBase.E_OK) {
+			log.error("Can't join the room {}", meetingId);
 			return;
 		}
 		if (joinService.getJoinedMeeting() != null) {
@@ -249,7 +252,9 @@ public class Bot extends BigBlueButtonClient implements
 			addParticipantStatusChangeListener(this);
 			addConnectedListener(this);
 			addPublicChatMessageListener(this);
-			connectBigBlueButton();
+			if (!connectBigBlueButton()) {
+				log.error("Failed to connect to BigBlueButton");
+			}
 		} else {
 			log.error(name  + " failed to join the meeting");
 		}
