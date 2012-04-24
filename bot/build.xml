@@ -99,7 +99,6 @@
             	<attribute name="Class-Path" value="."/>
             </manifest>	
         </jar>
-    	<copy todir="bin/" file="src/main/resources/log4j.properties" overwrite="true"/>
         <path id="lib.jars">
             <path location="target/${ant.project.name}/conf"/>
             <fileset dir="target/${ant.project.name}/lib"/>

@@ -263,7 +263,6 @@ public class BotLauncher {
 				try {
 					spawn_bots_thread.join();
 				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 				for (Bot bot : botArmy) {

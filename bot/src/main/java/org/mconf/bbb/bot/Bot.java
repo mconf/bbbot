@@ -7,8 +7,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelStateEvent;
 import org.mconf.bbb.BigBlueButtonClient;
 import org.mconf.bbb.BigBlueButtonClient.OnConnectedListener;
+import org.mconf.bbb.BigBlueButtonClient.OnDisconnectedListener;
 import org.mconf.bbb.BigBlueButtonClient.OnParticipantJoinedListener;
 import org.mconf.bbb.BigBlueButtonClient.OnParticipantLeftListener;
 import org.mconf.bbb.BigBlueButtonClient.OnParticipantStatusChangeListener;
@@ -33,6 +36,7 @@ public class Bot extends BigBlueButtonClient implements
 		OnParticipantLeftListener, 
 		OnParticipantStatusChangeListener, 
 		OnConnectedListener, 
+		OnDisconnectedListener,
 		OnPublicChatMessageListener
 {
 
@@ -59,25 +63,18 @@ public class Bot extends BigBlueButtonClient implements
 	private FlvPreLoader videoLoader;
 	private BbbVideoPublisher videoPublisher;
 	
+	private boolean disconnected_myself = false;
+	private boolean chat_sent = false;
+	
 	private void sendVideo() {
 		RtmpReader reader = new GlobalFlvReader(videoLoader);
-//		RtmpReader reader = null;
-
-//		try {
-//			reader = new FlvReader(videoFilename);
-//		} catch (Exception e) {
-//			log.error("Can't create a FlvReader instance for " + videoFilename);
-//		}
+    	String streamName = reader.getWidth() + "x" + reader.getHeight() + getMyUserId();
+    	if (getJoinService().getClass() == JoinService0Dot8.class)
+    		streamName += "-" + new Date().getTime();
 		
-		if (reader != null) {
-	    	String streamName = reader.getWidth() + "x" + reader.getHeight() + getMyUserId();
-	    	if (getJoinService().getClass() == JoinService0Dot8.class)
-	    		streamName += "-" + new Date().getTime();
-			
-			videoPublisher = new BbbVideoPublisher(this, reader, streamName);
-			videoPublisher.setLoop(true);
-			videoPublisher.start();
-		}
+		videoPublisher = new BbbVideoPublisher(this, reader, streamName);
+		videoPublisher.setLoop(true);
+		videoPublisher.start();
 	}
 	
 	private void connectVoice() {
@@ -91,7 +88,18 @@ public class Bot extends BigBlueButtonClient implements
 			}
 		}
 
-		voiceConnection = new BbbVoiceConnection(this, reader);
+		voiceConnection = new BbbVoiceConnection(this, reader) {
+			@Override
+			public void channelDisconnected(ChannelHandlerContext ctx,
+					ChannelStateEvent e) throws Exception {
+				super.channelDisconnected(ctx, e);
+				if (!disconnected_myself) {
+					log.error("{} has dropped from the voice conference, reconnecting", name);
+					voiceConnection.stop();
+					connectVoice();
+				}
+			}
+		};
 		voiceConnection.setLoop(true);
 		voiceConnection.start();
 	}
@@ -168,8 +176,7 @@ public class Bot extends BigBlueButtonClient implements
 
 	@Override
 	public void onConnectedUnsuccessfully() {
-		// TODO Auto-generated method stub
-		
+		log.error("The connection of {} was unsucceeded", name);
 	}
 
 	@Override
@@ -181,7 +188,10 @@ public class Bot extends BigBlueButtonClient implements
 	@Override
 	public void onPublicChatMessage(List<ChatMessage> publicChatMessages,
 			Map<Integer, Participant> participants) {
-		sendPublicChatMessage("Logged in on " + new SimpleDateFormat("dd-MM-yyyy HH:mm:ss").format(Calendar.getInstance().getTime()).toString());
+		if (!chat_sent) {
+			chat_sent = true;
+			sendPublicChatMessage("Logged in on " + new SimpleDateFormat("dd-MM-yyyy HH:mm:ss").format(Calendar.getInstance().getTime()).toString());
+		}
 	}
 
 	public void setServer(String server) {
@@ -229,6 +239,7 @@ public class Bot extends BigBlueButtonClient implements
 	}
 
 	public void start() {
+		disconnected_myself = false;
 		createJoinService(server, securityKey);
 		JoinServiceBase joinService = getJoinService();
 		if (joinService == null) {
@@ -250,6 +261,7 @@ public class Bot extends BigBlueButtonClient implements
 			addParticipantJoinedListener(this);
 			addParticipantStatusChangeListener(this);
 			addConnectedListener(this);
+			addDisconnectedListener(this);
 			addPublicChatMessageListener(this);
 			if (!connectBigBlueButton()) {
 				log.error("Failed to connect to BigBlueButton");
@@ -258,18 +270,14 @@ public class Bot extends BigBlueButtonClient implements
 			log.error(name  + " failed to join the meeting");
 		}
 	}
+	
+	private void stop() {
+		removeParticipantJoinedListener(this);
+		removeParticipantStatusChangeListener(this);
+		removeConnectedListener(this);
+		removeDisconnectedListener(this);
+		removePublicChatMessageListener(this);
 
-	public void setCreateMeeting(boolean create) {
-		this.create = create;
-	}
-
-	public void setVideoLoader(FlvPreLoader loader) {
-		this.videoLoader = loader;
-		
-	}
-
-	@Override
-	public void disconnect() {
 		for (BbbVideoReceiver receiver : remoteVideos.values())
 			receiver.stop();
 		remoteVideos.clear();
@@ -278,6 +286,29 @@ public class Bot extends BigBlueButtonClient implements
 			videoPublisher.stop();
 		if (voiceConnection != null)
 			voiceConnection.stop();
+	}
+
+	public void setCreateMeeting(boolean create) {
+		this.create = create;
+	}
+
+	public void setVideoLoader(FlvPreLoader loader) {
+		this.videoLoader = loader;
+	}
+
+	@Override
+	public void disconnect() {
+		disconnected_myself = true;
+		stop();
 		super.disconnect();
+	}
+
+	@Override
+	public void onDisconnected() {
+		if (!disconnected_myself) {
+			log.error("{} has been disconnected, reconnecting", name);
+			stop();
+			start();
+		}
 	}
 }
