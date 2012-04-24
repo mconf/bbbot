@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.mconf.bbb.BigBlueButtonClient;
 import org.mconf.bbb.api.JoinServiceBase;
@@ -21,8 +23,6 @@ import org.slf4j.LoggerFactory;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
-
-import org.mconf.bbb.bot.ProbabilitiesConverter;
 
 public class BotLauncher {
 	private static final Logger log = LoggerFactory.getLogger(BotLauncher.class);
@@ -100,6 +100,7 @@ public class BotLauncher {
 	
 	private List<Bot> botArmy = new ArrayList<Bot>();
 	private HashMap<Integer, Double> prob_acc;
+	private List<String> meetingsName = new ArrayList<String>();
 
 	private boolean parse(String[] args) throws IOException {
 		JCommander parser = new JCommander(this);
@@ -133,18 +134,23 @@ public class BotLauncher {
 		
 		role = role.toLowerCase();
 
+		BigBlueButtonClient client = new BigBlueButtonClient();
+		client.createJoinService(server, securityKey);
+		JoinServiceBase joinService = client.getJoinService();
+		if (joinService == null) {
+			log.error("Can't connect to the server, please check the server address");
+			return false;
+		}
+		
+		if (joinService.load() != JoinServiceBase.E_OK) {
+			log.error("Can't load the join service");
+			return false;
+		}
+		List<Meeting> meetings = client.getJoinService().getMeetings();
+		for (Meeting m : meetings)
+			meetingsName.add(m.getMeetingID());
+
 		if (get_meetings) {
-			BigBlueButtonClient client = new BigBlueButtonClient();
-			client.createJoinService(server, securityKey);
-			JoinServiceBase joinService = client.getJoinService();
-			if (joinService == null) {
-				log.error("Can't connect to the server, please check the server address");
-				return false;
-			}
-			
-			if (joinService.load() != JoinServiceBase.E_OK)
-				return false;
-			List<Meeting> meetings = client.getJoinService().getMeetings();
 			if (meetings.isEmpty())
 				log.info("No open meetings");
 			else {
@@ -177,6 +183,17 @@ public class BotLauncher {
 				DecimalFormat meeting_format = new DecimalFormat(new String(new char[3]).replace("\0", "0"));
 				
 				int meeting_index = 0;
+				// it will search for the meeting index considering the opened meetings
+				Pattern pattern = Pattern.compile(meeting + " [0]*(\\d+)");
+				for (String name : meetingsName) {
+					Matcher m = pattern.matcher(name);
+					if (m.matches()) {
+						int candidate = Integer.parseInt(m.group(1));
+						if (candidate > meeting_index)
+							meeting_index = candidate;
+					}
+				}
+				
 				int remaining_bots = 0;
 				boolean first_in_the_room = true;
 				for (int bot_index = 1; bot_index <= numbots; ++bot_index) {

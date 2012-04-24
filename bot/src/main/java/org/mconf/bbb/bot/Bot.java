@@ -237,7 +237,6 @@ public class Bot extends BigBlueButtonClient implements
 		}
 		if (create && joinService.createMeeting(meetingId) != JoinServiceBase.E_OK) {
 			log.error("Can't create the room {}, but I will continue on my task", meetingId);
-//			return;
 		}
 		if (joinService.load() != JoinServiceBase.E_OK) {
 			log.error("Can't load the join service");
