@@ -2,9 +2,7 @@
 //Adding video to the bots through Xuggler library, September 2011.
 package org.mconf.bbb.bot;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -98,6 +96,8 @@ public class BotLauncher {
 	@Parameter(names = "--everyone_receives_audio", arity = 1, description = "If [true], all the bots will receive the audio stream from the others", validateWith = BooleanValidator.class)
 	private boolean everyone_receives_audio = true;
 	
+	private boolean finalize_spawn_bots_thread = false;
+
 	private List<Bot> botArmy = new ArrayList<Bot>();
 	private HashMap<Integer, Double> prob_acc;
 	private List<String> meetingsName = new ArrayList<String>();
@@ -170,10 +170,12 @@ public class BotLauncher {
 			return;
 		}
 		
-		final Thread thread = new Thread(new Runnable() {
+		final Thread spawn_bots_thread = new Thread(new Runnable() {
 			
 			@Override
 			public void run() {
+				
+				
 				FlvPreLoader loader = new FlvPreLoader(videoFilename);
 				
 				log.info("Running with the following configuration:\n{}", BotLauncher.this.toString());
@@ -196,7 +198,7 @@ public class BotLauncher {
 				
 				int remaining_bots = 0;
 				boolean first_in_the_room = true;
-				for (int bot_index = 1; bot_index <= numbots; ++bot_index) {
+				for (int bot_index = 1; bot_index <= numbots && !finalize_spawn_bots_thread; ++bot_index) {
 					String instance_meeting;
 					if (single_meeting) {
 						instance_meeting = meeting;
@@ -252,21 +254,25 @@ public class BotLauncher {
 				}
 			}
 		});
-		thread.start();
 		
-		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-		try {
-			String s = br.readLine();
-			System.out.println(s);
-		} catch (IOException exception) {
-		}
-		
-		thread.join();
-
-		for (Bot bot : botArmy) {
-			bot.disconnect();
-		}
-		botArmy.clear();
+		Runtime.getRuntime().addShutdownHook(new Thread() {
+			@Override
+			public void run() {
+				log.info("\n\nFinalizing bots...\n");
+				finalize_spawn_bots_thread = true;
+				try {
+					spawn_bots_thread.join();
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				for (Bot bot : botArmy) {
+					bot.disconnect();
+				}
+				botArmy.clear();
+			}
+		});
+		spawn_bots_thread.start();
 	}
 
 	public static void main (String[] args) throws IOException, InterruptedException {
