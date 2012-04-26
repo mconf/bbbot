@@ -89,14 +89,31 @@ public class Bot extends BigBlueButtonClient implements
 		}
 
 		voiceConnection = new BbbVoiceConnection(this, reader) {
+			private void reconnect() {
+				try {
+					Thread.sleep(3000);
+				} catch (InterruptedException e) {
+					// do nothing, just return
+					return;
+				}
+				voiceConnection.start();
+			}
+			
 			@Override
 			public void channelDisconnected(ChannelHandlerContext ctx,
 					ChannelStateEvent e) throws Exception {
 				super.channelDisconnected(ctx, e);
 				if (!disconnected_myself) {
-					log.error("{} has dropped from the voice conference, reconnecting", name);
-					voiceConnection.stop();
-					connectVoice();
+					log.error("{} has dropped from the voice conference, reconnecting to {}", name, getJoinService().getApplicationService().getServerUrl());
+					reconnect();
+				}
+			}
+			
+			@Override
+			protected void onConnectedUnsuccessfully() {
+				if (!disconnected_myself) {
+					log.error("The voice connection of {} to {} was unsucceeded, trying one more time", name, getJoinService().getApplicationService().getServerUrl());
+					reconnect();
 				}
 			}
 		};
@@ -176,7 +193,7 @@ public class Bot extends BigBlueButtonClient implements
 
 	@Override
 	public void onConnectedUnsuccessfully() {
-		log.error("The connection of {} was unsucceeded", name);
+		log.error("The connection of {} to {} was unsucceeded", name, getJoinService().getApplicationService().getServerUrl());
 	}
 
 	@Override
