@@ -100,7 +100,7 @@ public class BotLauncher {
 
 	private List<Bot> botArmy = new ArrayList<Bot>();
 	private HashMap<Integer, Double> prob_acc;
-	private List<String> meetingsName = new ArrayList<String>();
+	private List<Meeting> meetings;
 
 	private boolean parse(String[] args) throws IOException {
 		JCommander parser = new JCommander(this);
@@ -146,9 +146,7 @@ public class BotLauncher {
 			log.error("Can't load the join service");
 			return false;
 		}
-		List<Meeting> meetings = client.getJoinService().getMeetings();
-		for (Meeting m : meetings)
-			meetingsName.add(m.getMeetingID());
+		meetings = client.getJoinService().getMeetings();
 
 		if (get_meetings) {
 			if (meetings.isEmpty())
@@ -174,9 +172,9 @@ public class BotLauncher {
 			
 			@Override
 			public void run() {
-				
-				
-				FlvPreLoader loader = new FlvPreLoader(videoFilename);
+				FlvPreLoader loader = null;
+				if (videoFilename != null)
+					loader = new FlvPreLoader(videoFilename);
 				
 				log.info("Running with the following configuration:\n{}", BotLauncher.this.toString());
 				
@@ -187,8 +185,10 @@ public class BotLauncher {
 				int meeting_index = 0;
 				// it will search for the meeting index considering the opened meetings
 				Pattern pattern = Pattern.compile(meeting + " [0]*(\\d+)");
-				for (String name : meetingsName) {
-					Matcher m = pattern.matcher(name);
+				for (Meeting meeting : meetings) {
+					if (meeting.getParticipantCount() <= 0)
+						continue;
+					Matcher m = pattern.matcher(meeting.getMeetingID());
 					if (m.matches()) {
 						int candidate = Integer.parseInt(m.group(1));
 						if (candidate > meeting_index)
