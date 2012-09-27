@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 
 import com.flazr.io.flv.FlvReader;
 import com.flazr.rtmp.RtmpReader;
+import com.flazr.rtmp.RtmpWriter;
 import com.flazr.rtmp.message.Video;
 
 public class Bot extends BigBlueButtonClient implements 
@@ -65,6 +66,12 @@ public class Bot extends BigBlueButtonClient implements
 	
 	private boolean disconnected_myself = false;
 	private boolean chat_sent = false;
+
+	private boolean recordAudio;
+
+	private int audioSampleSize;
+
+	private int numberOfAudioSamples;
 	
 	private void sendVideo() {
 		RtmpReader reader = new GlobalFlvReader(videoLoader);
@@ -78,17 +85,28 @@ public class Bot extends BigBlueButtonClient implements
 	}
 	
 	private void connectVoice() {
+		
 		RtmpReader reader = null;
-		if (audioFilename != null && audioFilename.length() > 0 && sendAudio) {
-			try {
-				reader = new FlvReader(audioFilename);
-			} catch (Exception e) {
-				e.printStackTrace();
-				log.error("Can't create a FlvReader instance for " + audioFilename);
+		RtmpWriter writer = null;
+		if (audioFilename != null && audioFilename.length() > 0) {
+			if (sendAudio) {
+				try {
+					reader = new FlvReader(audioFilename);
+				} catch (Exception e) {
+					e.printStackTrace();
+					log.error("Can't create a FlvReader instance for " + audioFilename);
+				}
+			} else if (recordAudio) {
+				try {
+					writer = new LimitedSizeFlvWriter(audioFilename, audioSampleSize);
+				} catch (Exception e) {
+					e.printStackTrace();
+					log.error("Can't create a FlvWriter instance for " + audioFilename);
+				}
 			}
 		}
 
-		voiceConnection = new BbbVoiceConnection(this, reader) {
+		voiceConnection = new BbbVoiceConnection(this, reader, writer) {
 			private void reconnect() {
 				try {
 					Thread.sleep(3000);
@@ -327,5 +345,17 @@ public class Bot extends BigBlueButtonClient implements
 			stop();
 			start();
 		}
+	}
+
+	public void setRecordAudio(boolean record_audio) {
+		this.recordAudio = record_audio; 
+	}
+
+	public void setAudioSampleSize(int audio_sample_size) {
+		this.audioSampleSize = audio_sample_size;
+	}
+
+	public void setNumberOfAudioSamples(int number_of_audio_samples) {
+		this.numberOfAudioSamples = number_of_audio_samples;
 	}
 }

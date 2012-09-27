@@ -19,6 +19,8 @@ import org.mconf.bbb.api.Meeting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import sun.font.CreatedFontTracker;
+
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 
@@ -28,30 +30,56 @@ public class BotLauncher {
 	@Override
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
-		builder.append("numbots: ").append(numbots).append("\nserver: ")
-				.append(server).append("\nsecurityKey: ").append(securityKey)
-				.append("\nmeeting: ").append(meeting)
-				.append("\nvideoFilename: ").append(videoFilename)
-				.append("\nvoiceFilename: ").append(voiceFilename)
-				.append("\nget_meetings: ").append(get_meetings)
-				.append("\ncommand_create: ").append(command_create)
-				.append("\nname: ").append(name).append("\nrole: ")
-				.append(role).append("\nprobabilities: ").append(probabilities)
-				.append("\ninterval: ").append(interval)
-				.append("\nsingle_meeting: ").append(single_meeting)
-				.append("\neveryone_sends_video: ")
-				.append(everyone_sends_video)
-				.append("\nonly_one_sends_video: ")
-				.append(only_one_sends_video)
-				.append("\neveryone_receives_video: ")
-				.append(everyone_receives_video)
-				.append("\neveryone_sends_audio: ")
-				.append(everyone_sends_audio)
-				.append("\nonly_one_sends_audio: ")
-				.append(only_one_sends_audio)
-				.append("\neveryone_receives_audio: ")
-				.append(everyone_receives_audio).append("\nbotArmy: ")
-				.append(botArmy).append("\nprob_acc: ").append(prob_acc);
+		builder.append("numbots: ");
+		builder.append(numbots);
+		builder.append("\nserver: ");
+		builder.append(server);
+		builder.append("\nsecurityKey: ");
+		builder.append(securityKey);
+		builder.append("\nmeeting: ");
+		builder.append(meeting);
+		builder.append("\nvideoFilename: ");
+		builder.append(videoFilename);
+		builder.append("\nvoiceFilename: ");
+		builder.append(voiceFilename);
+		builder.append("\nget_meetings: ");
+		builder.append(get_meetings);
+		builder.append("\ncommand_create: ");
+		builder.append(command_create);
+		builder.append("\nname: ");
+		builder.append(name);
+		builder.append("\nrole: ");
+		builder.append(role);
+		builder.append("\nprobabilities: ");
+		builder.append(probabilities);
+		builder.append("\ninterval: ");
+		builder.append(interval);
+		builder.append("\nsingle_meeting: ");
+		builder.append(single_meeting);
+		builder.append("\neveryone_sends_video: ");
+		builder.append(everyone_sends_video);
+		builder.append("\nonly_one_sends_video: ");
+		builder.append(only_one_sends_video);
+		builder.append("\neveryone_receives_video: ");
+		builder.append(everyone_receives_video);
+		builder.append("\neveryone_sends_audio: ");
+		builder.append(everyone_sends_audio);
+		builder.append("\nonly_one_sends_audio: ");
+		builder.append(only_one_sends_audio);
+		builder.append("\neveryone_receives_audio: ");
+		builder.append(everyone_receives_audio);
+		builder.append("\nrecord_audio: ");
+		builder.append(record_audio);
+		builder.append("\naudio_sample_size: ");
+		builder.append(audio_sample_size);
+		builder.append("\nnumber_of_audio_samples: ");
+		builder.append(number_of_audio_samples);
+		builder.append("\nfinalize_spawn_bots_thread: ");
+		builder.append(finish_spawn_bots_thread);
+		builder.append("\nbotArmy: ");
+		builder.append(botArmy);
+		builder.append("\nprob_acc: ");
+		builder.append(prob_acc);
 		return builder.toString();
 	}
 
@@ -95,8 +123,16 @@ public class BotLauncher {
 	private boolean only_one_sends_audio = true;
 	@Parameter(names = "--everyone_receives_audio", arity = 1, description = "If [true], all the bots will receive the audio stream from the others", validateWith = BooleanValidator.class)
 	private boolean everyone_receives_audio = true;
+
+	@Parameter(names = "--record_audio", arity = 1, description = "If [true], only one bot will be launched to record the audio of a meeting", validateWith = BooleanValidator.class)
+	private boolean record_audio = false;
+	@Parameter(names = "--audio_sample_size", description = "Size of the audio sample to record (in milliseconds)")
+	private int audio_sample_size = 10000;
+	@Parameter(names = "--number_of_audio_samples", description = "Number of samples to record by the bot")
+	private int number_of_audio_samples = 1;
 	
-	private boolean finalize_spawn_bots_thread = false;
+	private boolean finish_spawn_bots_thread = false;
+	private boolean finished_spawn_bots_thread = false;
 
 	private List<Bot> botArmy = new ArrayList<Bot>();
 	private HashMap<Integer, Double> prob_acc;
@@ -133,6 +169,18 @@ public class BotLauncher {
 		log.debug("Accumulated probabilities: {}", prob_acc.toString());
 		
 		role = role.toLowerCase();
+		
+		if (record_audio) {
+			numbots = 1;
+			command_create = false;
+			single_meeting = true;
+			only_one_sends_video = false;
+			only_one_sends_audio = false;
+			everyone_sends_video = false;
+			everyone_sends_audio = false;
+			everyone_receives_video = false;
+			everyone_receives_audio = true;
+		}
 
 		BigBlueButtonClient client = new BigBlueButtonClient();
 		client.createJoinService(server, securityKey);
@@ -162,7 +210,7 @@ public class BotLauncher {
 		return true;
 	}
 	
-	public void spawnBots() throws InterruptedException {
+	public void spawnBots() throws InterruptedException, IOException {
 		if (numbots <= 0) {
 			log.info("Number of bots <= 0, quitting");
 			return;
@@ -172,6 +220,7 @@ public class BotLauncher {
 			
 			@Override
 			public void run() {
+				finished_spawn_bots_thread = false;
 				FlvPreLoader loader = null;
 				if (videoFilename != null)
 					loader = new FlvPreLoader(videoFilename);
@@ -198,7 +247,7 @@ public class BotLauncher {
 				
 				int remaining_bots = 0;
 				boolean first_in_the_room = true;
-				for (int bot_index = 1; bot_index <= numbots && !finalize_spawn_bots_thread; ++bot_index) {
+				for (int bot_index = 1; bot_index <= numbots && !finish_spawn_bots_thread; ++bot_index) {
 					String instance_meeting;
 					if (single_meeting) {
 						instance_meeting = meeting;
@@ -238,6 +287,9 @@ public class BotLauncher {
 					bot.setReceiveVideo(everyone_receives_video);
 					bot.setSendAudio(everyone_sends_audio || (only_one_sends_audio && first_in_the_room));
 					bot.setReceiveAudio(everyone_receives_audio);
+					bot.setRecordAudio(record_audio);
+					bot.setAudioSampleSize(audio_sample_size);
+					bot.setNumberOfAudioSamples(number_of_audio_samples);
 					bot.setCreateMeeting(command_create && first_in_the_room);
 					bot.setVideoLoader(loader);
 					
@@ -252,26 +304,44 @@ public class BotLauncher {
 						}
 					first_in_the_room = false;
 				}
+				finished_spawn_bots_thread = true;
 			}
 		});
 		
-		Runtime.getRuntime().addShutdownHook(new Thread() {
-			@Override
-			public void run() {
-				log.info("\n\nFinalizing bots...\n");
-				finalize_spawn_bots_thread = true;
-				try {
-					spawn_bots_thread.join();
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-				for (Bot bot : botArmy) {
-					bot.disconnect();
-				}
-				botArmy.clear();
-			}
-		});
+//		Runtime.getRuntime().addShutdownHook(new Thread() {
+//			@Override
+//			public void run() {
+//				log.info("Finalizing bots...");
+//				finalize_spawn_bots_thread = true;
+//				try {
+//					spawn_bots_thread.join();
+//				} catch (InterruptedException e) {
+//					e.printStackTrace();
+//				}
+//				for (Bot bot : botArmy) {
+//					bot.disconnect();
+//				}
+//				log.info("Disconnected");
+//				botArmy.clear();
+//			}
+//		});
 		spawn_bots_thread.start();
+		System.in.read();
+		if (!finished_spawn_bots_thread) {
+			log.info("Stopping to spawn bots...");
+			finish_spawn_bots_thread = true;
+			spawn_bots_thread.join();
+			log.info("New bots won't join anymore...");
+		} else {
+			log.info("All bots already joined meetings...");
+		}
+		log.info("Press ENTER again to disconnect everybody...");
+		System.in.read();
+		for (Bot bot : botArmy) {
+			bot.disconnect();
+		}
+		log.info("Disconnected!");
+		botArmy.clear();
 	}
 
 	public static void main (String[] args) throws IOException, InterruptedException {
