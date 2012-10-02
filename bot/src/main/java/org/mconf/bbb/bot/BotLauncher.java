@@ -19,8 +19,6 @@ import org.mconf.bbb.api.Meeting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import sun.font.CreatedFontTracker;
-
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 
@@ -131,12 +129,16 @@ public class BotLauncher {
 	@Parameter(names = "--number_of_audio_samples", description = "Number of samples to record by the bot")
 	private int number_of_audio_samples = 1;
 	
+	@Parameter(names = "--fill_last_room", arity = 1, description = "If [true], the last room will always be filled independently of the number of bots", validateWith = BooleanValidator.class)
+	private boolean fill_last_room = false;
+
 	private boolean finish_spawn_bots_thread = false;
 	private boolean finished_spawn_bots_thread = false;
 
 	private List<Bot> botArmy = new ArrayList<Bot>();
 	private HashMap<Integer, Double> prob_acc;
 	private List<Meeting> meetings;
+	private Thread printNumberOfParticipants;
 
 	private boolean parse(String[] args) throws IOException {
 		JCommander parser = new JCommander(this);
@@ -216,6 +218,40 @@ public class BotLauncher {
 			return;
 		}
 		
+		Thread printNumberOfParticipants = new Thread(new Runnable() {
+			
+			@Override
+			public void run() {
+				BigBlueButtonClient client = new BigBlueButtonClient();
+				client.createJoinService(server, securityKey);
+				JoinServiceBase joinService = client.getJoinService();
+				if (joinService == null) {
+					log.error("Can't connect to the server, please check the server address");
+					return;
+				}
+				
+				while (true) {
+					try {
+						Thread.sleep(5000);
+					} catch (InterruptedException e) {
+						break;
+					}
+					if (joinService.load() != JoinServiceBase.E_OK) {
+						log.error("Can't load the join service");
+						continue;
+					}
+					int count = 0;
+					for (Meeting m : joinService.getMeetings()) {
+						int numParticipants = m.getAttendees().size();
+						log.info("Participants on meeting \"{}\": {}", m.getMeetingID(), numParticipants);
+						count += numParticipants;
+					}
+					log.info("Total number of participants: {}", count);
+				}
+			}
+		});
+		printNumberOfParticipants.start();
+
 		final Thread spawn_bots_thread = new Thread(new Runnable() {
 			
 			@Override
@@ -247,7 +283,8 @@ public class BotLauncher {
 				
 				int remaining_bots = 0;
 				boolean first_in_the_room = true;
-				for (int bot_index = 1; bot_index <= numbots && !finish_spawn_bots_thread; ++bot_index) {
+				int bot_index = 1;
+				while ((bot_index <= numbots || remaining_bots != 0) && !finish_spawn_bots_thread) {
 					String instance_meeting;
 					if (single_meeting) {
 						instance_meeting = meeting;
@@ -303,6 +340,8 @@ public class BotLauncher {
 							e.printStackTrace();
 						}
 					first_in_the_room = false;
+					
+					bot_index++;
 				}
 				finished_spawn_bots_thread = true;
 			}
@@ -342,6 +381,13 @@ public class BotLauncher {
 		}
 		log.info("Disconnected!");
 		botArmy.clear();
+
+		printNumberOfParticipants.interrupt();
+		try {
+			printNumberOfParticipants.join();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 	}
 
 	public static void main (String[] args) throws IOException, InterruptedException {

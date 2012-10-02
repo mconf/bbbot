@@ -68,9 +68,7 @@ public class Bot extends BigBlueButtonClient implements
 	private boolean chat_sent = false;
 
 	private boolean recordAudio;
-
 	private int audioSampleSize;
-
 	private int numberOfAudioSamples;
 	
 	private void sendVideo() {
@@ -300,10 +298,13 @@ public class Bot extends BigBlueButtonClient implements
 			addPublicChatMessageListener(this);
 			if (!connectBigBlueButton()) {
 				log.error("Failed to connect to BigBlueButton");
+				return;
 			}
 		} else {
 			log.error(name  + " failed to join the meeting");
+			return;
 		}
+
 	}
 	
 	private void stop() {
