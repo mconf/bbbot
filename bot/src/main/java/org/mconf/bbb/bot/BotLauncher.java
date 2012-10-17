@@ -131,6 +131,8 @@ public class BotLauncher {
 	
 	@Parameter(names = "--fill_last_room", arity = 1, description = "If [true], the last room will always be filled independently of the number of bots", validateWith = BooleanValidator.class)
 	private boolean fill_last_room = false;
+	@Parameter(names = "--print_rooms_info", arity = 1, description = "If [true], the information about number of participants per room will be printed to stdout", validateWith = BooleanValidator.class)
+	private boolean print_rooms_info = false;
 
 	private boolean finish_spawn_bots_thread = false;
 	private boolean finished_spawn_bots_thread = false;
@@ -250,7 +252,8 @@ public class BotLauncher {
 				}
 			}
 		});
-		printNumberOfParticipants.start();
+		if (print_rooms_info)
+			printNumberOfParticipants.start();
 
 		final Thread spawn_bots_thread = new Thread(new Runnable() {
 			
@@ -284,7 +287,7 @@ public class BotLauncher {
 				int remaining_bots = 0;
 				boolean first_in_the_room = true;
 				int bot_index = 1;
-				while ((bot_index <= numbots || remaining_bots != 0) && !finish_spawn_bots_thread) {
+				while ((bot_index <= numbots || (fill_last_room && remaining_bots != 0)) && !finish_spawn_bots_thread) {
 					String instance_meeting;
 					if (single_meeting) {
 						instance_meeting = meeting;
