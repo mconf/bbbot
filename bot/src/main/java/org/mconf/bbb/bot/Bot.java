@@ -16,8 +16,10 @@ import org.mconf.bbb.BigBlueButtonClient.OnParticipantJoinedListener;
 import org.mconf.bbb.BigBlueButtonClient.OnParticipantLeftListener;
 import org.mconf.bbb.BigBlueButtonClient.OnParticipantStatusChangeListener;
 import org.mconf.bbb.BigBlueButtonClient.OnPublicChatMessageListener;
+import org.mconf.bbb.api.ApplicationService;
 import org.mconf.bbb.api.JoinService0Dot8;
 import org.mconf.bbb.api.JoinServiceBase;
+import org.mconf.bbb.api.JoinServiceProxy;
 import org.mconf.bbb.chat.ChatMessage;
 import org.mconf.bbb.phone.BbbVoiceConnection;
 import org.mconf.bbb.users.IParticipant;
@@ -45,7 +47,7 @@ public class Bot extends BigBlueButtonClient implements
 	
 	public BbbVoiceConnection voiceConnection;
 
-	private Map<Integer, BbbVideoReceiver> remoteVideos = new HashMap<Integer, BbbVideoReceiver>();
+	private Map<String, BbbVideoReceiver> remoteVideos = new HashMap<String, BbbVideoReceiver>();
 
 	private String server;
 	private String securityKey;
@@ -73,9 +75,16 @@ public class Bot extends BigBlueButtonClient implements
 	
 	private void sendVideo() {
 		RtmpReader reader = new GlobalFlvReader(videoLoader);
-    	String streamName = reader.getWidth() + "x" + reader.getHeight() + getMyUserId();
-    	if (getJoinService().getClass() == JoinService0Dot8.class)
+    	String streamName = reader.getWidth() + "x" + reader.getHeight();
+    	if (getJoinService().getVersion().equals(ApplicationService.VERSION_0_7))
+    		streamName += getMyUserId();
+    	else {
+    		if (getJoinService().getVersion().equals(ApplicationService.VERSION_0_8))
+    			streamName += getMyUserId();
+    		else
+    			streamName += "-" + getMyUserId();
     		streamName += "-" + new Date().getTime();
+    	}
 		
 		videoPublisher = new BbbVideoPublisher(this, reader, streamName);
 		videoPublisher.setLoop(true);
@@ -139,7 +148,7 @@ public class Bot extends BigBlueButtonClient implements
 
 	@Override
 	public void onParticipantJoined(IParticipant p) {
-		if (p.getUserId() == getMyUserId()) { 
+		if (p.getUserId().equals(getMyUserId())) { 
 			if (videoFilename != null && videoFilename.length() > 0 && sendVideo)
 				sendVideo();
 		} else {
@@ -162,7 +171,7 @@ public class Bot extends BigBlueButtonClient implements
 
 	@Override
 	public void onChangeHasStream(IParticipant p) {
-		if (p.getUserId() == getMyUserId())
+		if (p.getUserId().equals(getMyUserId()))
 			return;
 		
 		if (recvVideo) {
@@ -174,7 +183,7 @@ public class Bot extends BigBlueButtonClient implements
 		}
 	}
 	
-	private void startReceivingVideo(int userId) {
+	private void startReceivingVideo(String userId) {
 		BbbVideoReceiver videoReceiver = new BbbVideoReceiver(userId, this) {
 			
 			@Override
@@ -187,7 +196,7 @@ public class Bot extends BigBlueButtonClient implements
 		videoReceiver.start();
 	}
 	
-	private void stopReceivingVideo(int userId) {
+	private void stopReceivingVideo(String userId) {
 		BbbVideoReceiver videoReceiver = remoteVideos.get(userId);
 		if (videoReceiver != null) {
 			videoReceiver.stop();
@@ -220,7 +229,7 @@ public class Bot extends BigBlueButtonClient implements
 
 	@Override
 	public void onPublicChatMessage(List<ChatMessage> publicChatMessages,
-			Map<Integer, Participant> participants) {
+			Map<String, Participant> participants) {
 		if (!chat_sent) {
 			chat_sent = true;
 			sendPublicChatMessage("Logged in on " + new SimpleDateFormat("dd-MM-yyyy HH:mm:ss").format(Calendar.getInstance().getTime()).toString());
