@@ -45,7 +45,7 @@ public class Bot extends BigBlueButtonClient implements
 	
 	public BbbVoiceConnection voiceConnection;
 
-	private Map<Integer, BbbVideoReceiver> remoteVideos = new HashMap<Integer, BbbVideoReceiver>();
+	private Map<String, BbbVideoReceiver> remoteVideos = new HashMap<String, BbbVideoReceiver>();
 
 	private String server;
 	private String securityKey;
@@ -139,18 +139,18 @@ public class Bot extends BigBlueButtonClient implements
 
 	@Override
 	public void onParticipantJoined(IParticipant p) {
-		if (p.getUserId() == getMyUserId()) { 
+		if (isMyself(p.getUserId())) { 
 			if (videoFilename != null && videoFilename.length() > 0 && sendVideo)
 				sendVideo();
 		} else {
-			if (p.getStatus().isHasStream() && recvVideo)
+			if (p.getStatus().doesHaveStream() && recvVideo)
 				startReceivingVideo(p.getUserId());
 		}
 	}
 
 	@Override
 	public void onParticipantLeft(IParticipant p) {
-		if (p.getStatus().isHasStream() && recvVideo)
+		if (p.getStatus().doesHaveStream() && recvVideo)
 			stopReceivingVideo(p.getUserId());
 	}
 
@@ -166,7 +166,7 @@ public class Bot extends BigBlueButtonClient implements
 			return;
 		
 		if (recvVideo) {
-			if (p.getStatus().isHasStream()) {
+			if (p.getStatus().doesHaveStream()) {
 				startReceivingVideo(p.getUserId());
 			} else {
 				stopReceivingVideo(p.getUserId());
@@ -174,7 +174,7 @@ public class Bot extends BigBlueButtonClient implements
 		}
 	}
 	
-	private void startReceivingVideo(int userId) {
+	private void startReceivingVideo(String userId) {
 		BbbVideoReceiver videoReceiver = new BbbVideoReceiver(userId, this) {
 			
 			@Override
@@ -187,7 +187,7 @@ public class Bot extends BigBlueButtonClient implements
 		videoReceiver.start();
 	}
 	
-	private void stopReceivingVideo(int userId) {
+	private void stopReceivingVideo(String userId) {
 		BbbVideoReceiver videoReceiver = remoteVideos.get(userId);
 		if (videoReceiver != null) {
 			videoReceiver.stop();
@@ -220,7 +220,7 @@ public class Bot extends BigBlueButtonClient implements
 
 	@Override
 	public void onPublicChatMessage(List<ChatMessage> publicChatMessages,
-			Map<Integer, Participant> participants) {
+			Map<String, Participant> participants) {
 		if (!chat_sent) {
 			chat_sent = true;
 			sendPublicChatMessage("Logged in on " + new SimpleDateFormat("dd-MM-yyyy HH:mm:ss").format(Calendar.getInstance().getTime()).toString());

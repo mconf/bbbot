@@ -72,12 +72,22 @@ public class BotLauncher {
 		builder.append(audio_sample_size);
 		builder.append("\nnumber_of_audio_samples: ");
 		builder.append(number_of_audio_samples);
-		builder.append("\nfinalize_spawn_bots_thread: ");
+		builder.append("\nfill_last_room: ");
+		builder.append(fill_last_room);
+		builder.append("\nprint_rooms_info: ");
+		builder.append(print_rooms_info);
+		builder.append("\nfinish_spawn_bots_thread: ");
 		builder.append(finish_spawn_bots_thread);
+		builder.append("\nfinished_spawn_bots_thread: ");
+		builder.append(finished_spawn_bots_thread);
 		builder.append("\nbotArmy: ");
 		builder.append(botArmy);
 		builder.append("\nprob_acc: ");
 		builder.append(prob_acc);
+		builder.append("\nmeetings: ");
+		builder.append(meetings);
+		builder.append("\nprintNumberOfParticipants: ");
+		builder.append(printNumberOfParticipants);
 		return builder.toString();
 	}
 
@@ -155,13 +165,14 @@ public class BotLauncher {
 		// set the default probabilities
 		if (probabilities == null) {
 			probabilities = new HashMap<Integer, Double>();
-			probabilities.put(2, 10.0);
-			probabilities.put(3, 30.0);
-			probabilities.put(4, 40.0);
-			probabilities.put(5, 15.0);
-			probabilities.put(6, 3.0);
-			probabilities.put(7, 1.0);
-			probabilities.put(10, 1.0);
+			probabilities.put(2, 58.68);
+			probabilities.put(3, 20.82);
+			probabilities.put(4, 10.14);
+			probabilities.put(5, 4.56);
+			probabilities.put(6, 2.74);
+			probabilities.put(7, 1.21);
+			probabilities.put(8, 0.8);
+			probabilities.put(9, 1.05);
 		}
 		
 		double acc = 0.0;
