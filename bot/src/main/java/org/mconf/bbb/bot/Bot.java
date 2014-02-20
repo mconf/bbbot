@@ -17,6 +17,7 @@ import org.mconf.bbb.BigBlueButtonClient.OnParticipantLeftListener;
 import org.mconf.bbb.BigBlueButtonClient.OnParticipantStatusChangeListener;
 import org.mconf.bbb.BigBlueButtonClient.OnPublicChatMessageListener;
 import org.mconf.bbb.api.JoinService0Dot8;
+import org.mconf.bbb.api.JoinService0Dot81;
 import org.mconf.bbb.api.JoinServiceBase;
 import org.mconf.bbb.chat.ChatMessage;
 import org.mconf.bbb.phone.BbbVoiceConnection;
@@ -73,9 +74,12 @@ public class Bot extends BigBlueButtonClient implements
 	
 	private void sendVideo() {
 		RtmpReader reader = new GlobalFlvReader(videoLoader);
-    	String streamName = reader.getWidth() + "x" + reader.getHeight() + getMyUserId();
-    	if (getJoinService().getClass() == JoinService0Dot8.class)
-    		streamName += "-" + new Date().getTime();
+		String streamName = reader.getWidth() + "x" + reader.getHeight() + getMyUserId();
+		if (getJoinService().getClass() == JoinService0Dot8.class) {
+			streamName += "-" + new Date().getTime();
+		} else if (getJoinService().getClass() == JoinService0Dot81.class) {
+			streamName = reader.getWidth() + "x" + reader.getHeight() + "-" + getMyUserId() + "-" + new Date().getTime();
+		}
 		
 		videoPublisher = new BbbVideoPublisher(this, reader, streamName);
 		videoPublisher.setLoop(true);
