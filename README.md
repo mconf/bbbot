@@ -8,14 +8,25 @@ It is a java application based on the libraries `bbb-java` and `flazr` that were
 
 Usage
 -----
+Java version required:
+
+    java version "1.7.0_21"
 
 To use the bot run the jar file at `bot/bin/bbbot.jar`. See its options with:
 
     java -jar bot/bin/bbbot.jar --help
 
-Command line example:
+Command line examples:
 
-    java -jar bin/bbbot.jar --meeting "Demo Meeting" --numbots 1 --server http://my-bbb-sever --key 03b07 --voice "etc/audio-sample.flv" --video "etc/video-sample.flv"
+1 bot sending audio and video on "Demo Meeting"
+
+    java -jar bin/bbbot.jar --meeting "Demo Meeting" --numbots 1 --server http://my-bbb-server --key key_value --audio "etc/audio-sample.flv" --video "etc/video-sample.flv"
+    
+
+5 bots on a single meeting sending audio and video on "Demo Meeting"
+
+    java -jar bin/bbbot.jar --meeting "Demo Meeting" --numbots 5 --server http://my-bbb-server --key key_value --single_meeting true --video "etc/video-sample.flv"  --audio "etc/audio-sample.flv" --everyone_sends_video true
+
 
 
 Development
