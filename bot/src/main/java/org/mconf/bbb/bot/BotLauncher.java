@@ -76,6 +76,10 @@ public class BotLauncher {
 		builder.append(fill_last_room);
 		builder.append("\nprint_rooms_info: ");
 		builder.append(print_rooms_info);
+		builder.append("\nlisten_only: ");
+		builder.append(listen_only);
+		builder.append("\ntwo_way_audio: ");
+		builder.append(two_way_audio);
 		builder.append("\nfinish_spawn_bots_thread: ");
 		builder.append(finish_spawn_bots_thread);
 		builder.append("\nfinished_spawn_bots_thread: ");
@@ -110,13 +114,13 @@ public class BotLauncher {
 	@Parameter(names = "--name", description = "Prefix of the bots followed by a number")
 	private String name = "Bot";
 	@Parameter(names = "--role", description = "Role of the bots in the conference (moderator|viewer)", validateWith = RoleValidator.class)
-	private String role = "moderator";
+	private String role = "viewer";
 	@Parameter(names = "--probabilities", description = "Specifies the probabilities for number of users per meeting", validateWith = ProbabilitiesValidator.class, converter = ProbabilitiesConverter.class)
 	private Map<Integer, Double> probabilities;
 	
 	@Parameter(names = "--interval", description = "Interval between the launch of each bot (in milliseconds)")
 	private int interval = 5000;
-	@Parameter(names = "--single_meeting", arity = 1, description = "If set, all the bots will join the same room specified by --meeting", validateWith = BooleanValidator.class)
+	@Parameter(names = "--single_meeting", description = "If set, all the bots will join the same room specified by --meeting")
 	private boolean single_meeting = false;
 	
 	@Parameter(names = "--everyone_sends_video", arity = 1, description = "If [true], all the bots will send the video file specified by --video", validateWith = BooleanValidator.class)
@@ -132,17 +136,22 @@ public class BotLauncher {
 	@Parameter(names = "--everyone_receives_audio", arity = 1, description = "If [true], all the bots will receive the audio stream from the others", validateWith = BooleanValidator.class)
 	private boolean everyone_receives_audio = true;
 
-	@Parameter(names = "--record_audio", arity = 1, description = "If [true], only one bot will be launched to record the audio of a meeting", validateWith = BooleanValidator.class)
+	@Parameter(names = "--record_audio", description = "If set, only one bot will be launched to record the audio of a meeting")
 	private boolean record_audio = false;
 	@Parameter(names = "--audio_sample_size", description = "Size of the audio sample to record (in milliseconds)")
 	private int audio_sample_size = 10000;
 	@Parameter(names = "--number_of_audio_samples", description = "Number of samples to record by the bot")
 	private int number_of_audio_samples = 1;
 	
-	@Parameter(names = "--fill_last_room", arity = 1, description = "If [true], the last room will always be filled independently of the number of bots", validateWith = BooleanValidator.class)
+	@Parameter(names = "--fill_last_room", description = "If set, the last room will always be filled independently of the number of bots")
 	private boolean fill_last_room = false;
-	@Parameter(names = "--print_rooms_info", arity = 1, description = "If [true], the information about number of participants per room will be printed to stdout", validateWith = BooleanValidator.class)
+	@Parameter(names = "--print_rooms_info", description = "If set, the information about number of participants per room will be printed to stdout")
 	private boolean print_rooms_info = false;
+
+	@Parameter(names = "--listen_only", description = "If set, all the bots will connect to the listen only stream")
+	private boolean listen_only = false;
+	@Parameter(names = "--two_way_audio", description = "If set, all the bots will connect to the two way audio stream")
+	private boolean two_way_audio = false;
 
 	private boolean finish_spawn_bots_thread = false;
 	private boolean finished_spawn_bots_thread = false;
@@ -157,7 +166,7 @@ public class BotLauncher {
 		try {
 			parser.parse(args);
 		} catch (Exception e) {
-			System.err.println(e.getMessage());
+			log.error(e.getMessage());
 			parser.usage();
 			return false;
 		}
@@ -185,6 +194,15 @@ public class BotLauncher {
 		
 		role = role.toLowerCase();
 		
+		if (only_one_sends_audio && everyone_sends_audio) {
+			log.error("--only_one_sends_audio and --everyone_sends_audio must not be true at the same time");
+			return false;
+		}
+		if (only_one_sends_video && everyone_sends_video) {
+			log.error("--only_one_sends_video and --everyone_sends_video must not be true at the same time");
+			return false;
+		}
+		
 		if (record_audio) {
 			numbots = 1;
 			command_create = false;
@@ -195,6 +213,18 @@ public class BotLauncher {
 			everyone_sends_audio = false;
 			everyone_receives_video = false;
 			everyone_receives_audio = true;
+		}
+		
+		if (two_way_audio && listen_only) {
+			log.error("--two_way_audio and --listen_only must not be true at the same time");
+			return false;
+		}
+		listen_only = listen_only || !two_way_audio;
+		two_way_audio = two_way_audio || !listen_only;
+		
+		if (listen_only) {
+			only_one_sends_audio = false;
+			everyone_sends_audio = false;
 		}
 
 		BigBlueButtonClient client = new BigBlueButtonClient();
@@ -263,8 +293,9 @@ public class BotLauncher {
 				}
 			}
 		});
-		if (print_rooms_info)
+		if (print_rooms_info) {
 			printNumberOfParticipants.start();
+		}
 
 		final Thread spawn_bots_thread = new Thread(new Runnable() {
 			
@@ -343,6 +374,7 @@ public class BotLauncher {
 					bot.setNumberOfAudioSamples(number_of_audio_samples);
 					bot.setCreateMeeting(command_create && first_in_the_room);
 					bot.setVideoLoader(loader);
+					bot.setListenOnly(listen_only);
 					
 					bot.start();
 

@@ -71,6 +71,7 @@ public class Bot extends BigBlueButtonClient implements
 	private boolean recordAudio;
 	private int audioSampleSize;
 	private int numberOfAudioSamples;
+	private boolean listenOnly;
 	
 	private void sendVideo() {
 		RtmpReader reader = new GlobalFlvReader(videoLoader);
@@ -78,7 +79,7 @@ public class Bot extends BigBlueButtonClient implements
 		if (getJoinService().getClass() == JoinService0Dot8.class) {
 			streamName += "-" + new Date().getTime();
 		} else if (getJoinService().getClass() == JoinService0Dot81.class) {
-			streamName = reader.getWidth() + "x" + reader.getHeight() + "-" + getMyUserId() + "-" + new Date().getTime();
+			streamName = "low-" + getMyUserId() + "-" + new Date().getTime();
 		}
 		
 		videoPublisher = new BbbVideoPublisher(this, reader, streamName);
@@ -137,6 +138,7 @@ public class Bot extends BigBlueButtonClient implements
 				}
 			}
 		};
+		voiceConnection.setListenOnly(listenOnly);
 		voiceConnection.setLoop(true);
 		voiceConnection.start();
 	}
@@ -362,5 +364,9 @@ public class Bot extends BigBlueButtonClient implements
 
 	public void setNumberOfAudioSamples(int number_of_audio_samples) {
 		this.numberOfAudioSamples = number_of_audio_samples;
+	}
+
+	public void setListenOnly(boolean listen_only) {
+		this.listenOnly = listen_only;
 	}
 }
