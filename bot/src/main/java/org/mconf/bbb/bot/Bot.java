@@ -18,6 +18,7 @@ import org.mconf.bbb.BigBlueButtonClient.OnParticipantStatusChangeListener;
 import org.mconf.bbb.BigBlueButtonClient.OnPublicChatMessageListener;
 import org.mconf.bbb.api.JoinService0Dot8;
 import org.mconf.bbb.api.JoinService0Dot81;
+import org.mconf.bbb.api.JoinService0Dot9;
 import org.mconf.bbb.api.JoinServiceBase;
 import org.mconf.bbb.chat.ChatMessage;
 import org.mconf.bbb.phone.BbbVoiceConnection;
@@ -79,6 +80,9 @@ public class Bot extends BigBlueButtonClient implements
 		if (getJoinService().getClass() == JoinService0Dot8.class) {
 			streamName += "-" + new Date().getTime();
 		} else if (getJoinService().getClass() == JoinService0Dot81.class) {
+			streamName = "low-" + getMyUserId() + "-" + new Date().getTime();
+		} else if (getJoinService().getClass() == JoinService0Dot9.class) {
+			// TODO: check this for modifications
 			streamName = "low-" + getMyUserId() + "-" + new Date().getTime();
 		}
 		
