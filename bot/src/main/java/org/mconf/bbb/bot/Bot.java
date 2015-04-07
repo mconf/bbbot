@@ -79,10 +79,8 @@ public class Bot extends BigBlueButtonClient implements
 		String streamName = reader.getWidth() + "x" + reader.getHeight() + getMyUserId();
 		if (getJoinService().getClass() == JoinService0Dot8.class) {
 			streamName += "-" + new Date().getTime();
-		} else if (getJoinService().getClass() == JoinService0Dot81.class) {
-			streamName = "low-" + getMyUserId() + "-" + new Date().getTime();
-		} else if (getJoinService().getClass() == JoinService0Dot9.class) {
-			// TODO: check this for modifications
+		} else if (getJoinService().getClass() == JoinService0Dot81.class ||
+				getJoinService().getClass() == JoinService0Dot9.class) {
 			streamName = "low-" + getMyUserId() + "-" + new Date().getTime();
 		}
 		
@@ -150,6 +148,9 @@ public class Bot extends BigBlueButtonClient implements
 	@Override
 	public void onParticipantJoined(IParticipant p) {
 		if (isMyself(p.getUserId())) { 
+			if (recvAudio || sendAudio) {
+				connectVoice();
+			}
 			if (videoFilename != null && videoFilename.length() > 0 && sendVideo)
 				sendVideo();
 		} else {
@@ -213,8 +214,6 @@ public class Bot extends BigBlueButtonClient implements
 
 	@Override
 	public void onConnectedSuccessfully() {
-		if (recvAudio || sendAudio)
-			connectVoice();
 	}
 
 	@Override
@@ -316,7 +315,7 @@ public class Bot extends BigBlueButtonClient implements
 		}
 
 	}
-	
+
 	private void stop() {
 		removeParticipantJoinedListener(this);
 		removeParticipantStatusChangeListener(this);
@@ -324,14 +323,21 @@ public class Bot extends BigBlueButtonClient implements
 		removeDisconnectedListener(this);
 		removePublicChatMessageListener(this);
 
-		for (BbbVideoReceiver receiver : remoteVideos.values())
-			receiver.stop();
+		Object[] receiver = remoteVideos.values().toArray();
+		for (int i = receiver.length; i > 0; i--)
+			 ((BbbVideoReceiver) receiver[i - 1]).stop();
 		remoteVideos.clear();
 		
 		if (videoPublisher != null)
 			videoPublisher.stop();
 		if (voiceConnection != null)
 			voiceConnection.stop();
+
+		try {
+			Thread.sleep(25);
+		} catch(InterruptedException ex) {
+			Thread.currentThread().interrupt();
+		}
 	}
 
 	public void setCreateMeeting(boolean create) {
