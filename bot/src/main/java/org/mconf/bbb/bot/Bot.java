@@ -333,6 +333,7 @@ public class Bot extends BigBlueButtonClient implements
 		if (voiceConnection != null)
 			voiceConnection.stop();
 
+		// TODO: This wait is needed to avoid some race condition. Could be revised later
 		try {
 			Thread.sleep(25);
 		} catch(InterruptedException ex) {
