@@ -44,6 +44,8 @@ public class BotLauncher {
 		builder.append(get_meetings);
 		builder.append("\ncommand_create: ");
 		builder.append(command_create);
+		builder.append("\nrecord: ");
+		builder.append(record);
 		builder.append("\nname: ");
 		builder.append(name);
 		builder.append("\nrole: ");
@@ -111,6 +113,8 @@ public class BotLauncher {
 	private boolean get_meetings = false;
 	@Parameter(names = "--create", arity = 1, description = "If the meeting specified by --meeting doesn't exists, the bot will create it before join", validateWith = BooleanValidator.class)
 	private boolean command_create = true;
+	@Parameter(names = "--record", arity = 1, description = "Specifies record flag in the CREATE call", validateWith = BooleanValidator.class)
+	private boolean record = true;
 	@Parameter(names = "--name", description = "Prefix of the bots followed by a number")
 	private String name = "Bot";
 	@Parameter(names = "--role", description = "Role of the bots in the conference (moderator|viewer)", validateWith = RoleValidator.class)
@@ -221,11 +225,6 @@ public class BotLauncher {
 		}
 		listen_only = listen_only || !two_way_audio;
 		two_way_audio = two_way_audio || !listen_only;
-		
-		if (listen_only) {
-			only_one_sends_audio = false;
-			everyone_sends_audio = false;
-		}
 
 		BigBlueButtonClient client = new BigBlueButtonClient();
 		client.createJoinService(server, securityKey);
@@ -374,7 +373,8 @@ public class BotLauncher {
 					bot.setNumberOfAudioSamples(number_of_audio_samples);
 					bot.setCreateMeeting(command_create && first_in_the_room);
 					bot.setVideoLoader(loader);
-					bot.setListenOnly(listen_only);
+					bot.setListenOnly(listen_only && !(everyone_sends_audio || (only_one_sends_audio && first_in_the_room)));
+					bot.setRecord(record);
 					
 					bot.start();
 

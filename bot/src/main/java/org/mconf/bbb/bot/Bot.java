@@ -62,6 +62,7 @@ public class Bot extends BigBlueButtonClient implements
 	private boolean recvAudio;
 
 	private boolean create;
+	private boolean record;
 
 	private FlvPreLoader videoLoader;
 	private BbbVideoPublisher videoPublisher;
@@ -279,6 +280,10 @@ public class Bot extends BigBlueButtonClient implements
 	public void setReceiveAudio(boolean recvAudio) {
 		this.recvAudio = recvAudio;
 	}
+	
+	public void setRecord(boolean record) {
+		this.record = record;
+	}
 
 	public void start() {
 		disconnected_myself = false;
@@ -288,7 +293,7 @@ public class Bot extends BigBlueButtonClient implements
 			log.error("Can't connect to the server, please check the server address");
 			return;
 		}
-		if (create && joinService.createMeeting(meetingId) != JoinServiceBase.E_OK) {
+		if (create && joinService.createMeeting(meetingId, record) != JoinServiceBase.E_OK) {
 			log.error("Can't create the room {}, but I will continue on my task", meetingId);
 		}
 		if (joinService.load() != JoinServiceBase.E_OK) {
