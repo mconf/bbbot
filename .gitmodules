@@ -1,6 +1,6 @@
 [submodule "flazr"]
 	path = flazr
-	url = git://github.com/pedrobmarin/flazr.git
+	url = git://github.com/mconf/flazr.git
 [submodule "bbb-java"]
 	path = bbb-java
-	url = git://github.com/pedrobmarin/bbb-java.git
+	url = git://github.com/mconf/bbb-java.git
