@@ -62,6 +62,7 @@ public class Bot extends BigBlueButtonClient implements
 	private boolean recvVideo;
 	private boolean sendAudio;
 	private boolean recvAudio;
+	private boolean recvDeskshare;
 
 	private boolean create;
 
@@ -194,7 +195,9 @@ public class Bot extends BigBlueButtonClient implements
 			if (videoFilename != null && videoFilename.length() > 0 && sendVideo) {
 				sendVideo();
 			}
-			connectDeskshare();
+			if (recvDeskshare) {
+				connectDeskshare();
+			}
 		} else {
 			if (p.getStatus().doesHaveStream() && recvVideo)
 				startReceivingVideo(p.getUserId());
@@ -320,6 +323,10 @@ public class Bot extends BigBlueButtonClient implements
 
 	public void setReceiveAudio(boolean recvAudio) {
 		this.recvAudio = recvAudio;
+	}
+
+	public void setReceiveDeskshare(boolean recvDeskshare) {
+		this.recvDeskshare = recvDeskshare;
 	}
 
 	public void start() {

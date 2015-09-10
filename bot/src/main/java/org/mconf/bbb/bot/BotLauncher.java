@@ -66,6 +66,8 @@ public class BotLauncher {
 		builder.append(only_one_sends_audio);
 		builder.append("\neveryone_receives_audio: ");
 		builder.append(everyone_receives_audio);
+		builder.append("\neveryone_receives_deskshare: ");
+		builder.append(everyone_receives_deskshare);
 		builder.append("\nrecord_audio: ");
 		builder.append(record_audio);
 		builder.append("\naudio_sample_size: ");
@@ -135,6 +137,9 @@ public class BotLauncher {
 	private boolean only_one_sends_audio = true;
 	@Parameter(names = "--everyone_receives_audio", arity = 1, description = "If [true], all the bots will receive the audio stream from the others", validateWith = BooleanValidator.class)
 	private boolean everyone_receives_audio = true;
+
+	@Parameter(names = "--everyone_receives_deskshare", arity = 1, description = "If [true], all the bots will connect the deskshare stream", validateWith = BooleanValidator.class)
+	private boolean everyone_receives_deskshare = true;
 
 	@Parameter(names = "--record_audio", description = "If set, only one bot will be launched to record the audio of a meeting")
 	private boolean record_audio = false;
@@ -369,6 +374,7 @@ public class BotLauncher {
 					bot.setReceiveVideo(everyone_receives_video);
 					bot.setSendAudio(everyone_sends_audio || (only_one_sends_audio && first_in_the_room));
 					bot.setReceiveAudio(everyone_receives_audio);
+					bot.setReceiveDeskshare(everyone_receives_deskshare);
 					bot.setRecordAudio(record_audio);
 					bot.setAudioSampleSize(audio_sample_size);
 					bot.setNumberOfAudioSamples(number_of_audio_samples);
