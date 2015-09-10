@@ -93,6 +93,10 @@ public class Bot extends BigBlueButtonClient implements
 
 	private void connectDeskshare() {
 		deskshareConnection = new BbbDeskshareConnection(this) {
+			/* TODO: We must review this
+			 * When we reconnect we change the RTMP channel and
+			 * this should be refreshed also at the deskshare module
+			 */
 			private void reconnect() {
 				try {
 					Thread.sleep(3000);
