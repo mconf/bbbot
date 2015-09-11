@@ -21,6 +21,7 @@ import org.mconf.bbb.api.JoinService0Dot81;
 import org.mconf.bbb.api.JoinService0Dot9;
 import org.mconf.bbb.api.JoinServiceBase;
 import org.mconf.bbb.chat.ChatMessage;
+import org.mconf.bbb.deskshare.BbbDeskshareConnection;
 import org.mconf.bbb.phone.BbbVoiceConnection;
 import org.mconf.bbb.users.IParticipant;
 import org.mconf.bbb.users.Participant;
@@ -46,6 +47,7 @@ public class Bot extends BigBlueButtonClient implements
 	private static final Logger log = LoggerFactory.getLogger(Bot.class);
 	
 	public BbbVoiceConnection voiceConnection;
+	public BbbDeskshareConnection deskshareConnection;
 
 	private Map<String, BbbVideoReceiver> remoteVideos = new HashMap<String, BbbVideoReceiver>();
 
@@ -60,6 +62,7 @@ public class Bot extends BigBlueButtonClient implements
 	private boolean recvVideo;
 	private boolean sendAudio;
 	private boolean recvAudio;
+	private boolean recvDeskshare;
 
 	private boolean create;
 	private boolean record;
@@ -88,6 +91,44 @@ public class Bot extends BigBlueButtonClient implements
 		videoPublisher = new BbbVideoPublisher(this, reader, streamName);
 		videoPublisher.setLoop(true);
 		videoPublisher.start();
+	}
+
+	private void connectDeskshare() {
+		deskshareConnection = new BbbDeskshareConnection(this) {
+			/* TODO: We must review this
+			 * When we reconnect we change the RTMP channel and
+			 * this should be refreshed also at the deskshare module
+			 */
+			private void reconnect() {
+				try {
+					Thread.sleep(3000);
+				} catch (InterruptedException e) {
+					// do nothing, just return
+					return;
+				}
+				deskshareConnection.start();
+			}
+
+			@Override
+			public void channelDisconnected(ChannelHandlerContext ctx,
+					ChannelStateEvent e) throws Exception {
+				super.channelDisconnected(ctx, e);
+				if (!disconnected_myself) {
+					log.error("{} has dropped from the deskshare conference, reconnecting to {}", name, getJoinService().getApplicationService().getServerUrl());
+					reconnect();
+				}
+			}
+
+			@Override
+			protected void onConnectedUnsuccessfully() {
+				if (!disconnected_myself) {
+					log.error("The deskshare connection of {} to {} was unsucceeded, trying one more time", name, getJoinService().getApplicationService().getServerUrl());
+					reconnect();
+				}
+			}
+		};
+
+		deskshareConnection.start();
 	}
 	
 	private void connectVoice() {
@@ -152,8 +193,12 @@ public class Bot extends BigBlueButtonClient implements
 			if (recvAudio || sendAudio) {
 				connectVoice();
 			}
-			if (videoFilename != null && videoFilename.length() > 0 && sendVideo)
+			if (videoFilename != null && videoFilename.length() > 0 && sendVideo) {
 				sendVideo();
+			}
+			if (recvDeskshare) {
+				connectDeskshare();
+			}
 		} else {
 			if (p.getStatus().doesHaveStream() && recvVideo)
 				startReceivingVideo(p.getUserId());
@@ -285,6 +330,10 @@ public class Bot extends BigBlueButtonClient implements
 		this.record = record;
 	}
 
+	public void setReceiveDeskshare(boolean recvDeskshare) {
+		this.recvDeskshare = recvDeskshare;
+	}
+
 	public void start() {
 		disconnected_myself = false;
 		createJoinService(server, securityKey);
@@ -337,6 +386,8 @@ public class Bot extends BigBlueButtonClient implements
 			videoPublisher.stop();
 		if (voiceConnection != null)
 			voiceConnection.stop();
+		if (deskshareConnection != null)
+			deskshareConnection.stop();
 
 		// TODO: This wait is needed to avoid some race condition. Could be revised later
 		try {
