@@ -132,7 +132,6 @@ public class Bot extends BigBlueButtonClient implements
 	}
 	
 	private void connectVoice() {
-		
 		RtmpReader reader = null;
 		RtmpWriter writer = null;
 		if (audioFilename != null && audioFilename.length() > 0) {
@@ -200,8 +199,9 @@ public class Bot extends BigBlueButtonClient implements
 				connectDeskshare();
 			}
 		} else {
-			if (p.getStatus().doesHaveStream() && recvVideo)
+			if (p.getStatus().doesHaveStream() && recvVideo) {
 				startReceivingVideo(p.getUserId());
+			}
 		}
 	}
 
