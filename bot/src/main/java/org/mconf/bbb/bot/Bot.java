@@ -188,7 +188,7 @@ public class Bot extends BigBlueButtonClient implements
 
 	@Override
 	public void onParticipantJoined(IParticipant p) {
-		if (isMyself(p.getUserId())) { 
+		if (isMyself(p.getUserId())) {
 			if (recvAudio || sendAudio) {
 				connectVoice();
 			}
@@ -219,7 +219,7 @@ public class Bot extends BigBlueButtonClient implements
 
 	@Override
 	public void onChangeHasStream(IParticipant p) {
-		if (p.getUserId() == getMyUserId())
+		if (isMyself(p.getUserId()))
 			return;
 		
 		if (recvVideo) {
