@@ -3,7 +3,7 @@ BBBot
 
 BBBot is a command line client for [BigBlueButton](http://mconf.org) developed in the project [Mconf](http://mconf.org). It can connect several _bots_ to a conference and do things like send and receive audio and video.
 
-It is a java application based on the libraries `bbb-java` and `flazr` that were originally built by Mconf to be used in `BBB-Android`, an Android client for BigBlueButton.
+It is a java application based on the libraries `bbb-java` and `flair` that were originally built by Mconf to be used in `BBB-Android`, an Android client for BigBlueButton.
 
 
 Usage
